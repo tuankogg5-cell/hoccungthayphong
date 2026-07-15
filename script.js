@@ -139,6 +139,23 @@ function openEnvelope() {
     if (hasOpened) return;
     hasOpened = true;
     
+    // Play local audio background music
+    const bgMusic = document.getElementById('bgMusic');
+    const musicBtn = document.getElementById('musicToggle');
+    if (bgMusic) {
+        bgMusic.play().then(() => {
+            if (musicBtn) {
+                musicBtn.classList.remove('hidden');
+                musicBtn.classList.add('playing');
+            }
+        }).catch((err) => {
+            console.log("Autoplay blocked, showing play toggle:", err);
+            if (musicBtn) {
+                musicBtn.classList.remove('hidden');
+            }
+        });
+    }
+    
     // Get envelope position for burst effect
     const rect = envelopeBtn.getBoundingClientRect();
     const x = rect.left + rect.width / 2;
@@ -236,3 +253,19 @@ window.addEventListener('touchmove', (e) => {
         spawnSparkle(e.touches[0].clientX, e.touches[0].clientY);
     }
 }, { passive: true });
+
+// Toggle play/pause for local audio element
+const musicToggle = document.getElementById('musicToggle');
+const bgMusic = document.getElementById('bgMusic');
+if (musicToggle && bgMusic) {
+    musicToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (bgMusic.paused) {
+            bgMusic.play();
+            musicToggle.classList.add('playing');
+        } else {
+            bgMusic.pause();
+            musicToggle.classList.remove('playing');
+        }
+    });
+}
