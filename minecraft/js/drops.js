@@ -44,7 +44,7 @@ class ItemDrop {
         const targetPos = player.position.clone().add(new THREE.Vector3(0, 0.8, 0));
         const dist = this.position.distanceTo(targetPos);
         
-        if (dist < 3.2) {
+        if (dist < 8.0) {
             // 1. Hiệu ứng từ trường hút vật phẩm về phía người chơi khi ở gần
             const direction = new THREE.Vector3().subVectors(targetPos, this.position).normalize();
             
