@@ -684,6 +684,7 @@ class Game {
     setupEventListeners() {
         const startScreen = document.getElementById('startScreen');
         const pauseScreen = document.getElementById('pauseScreen');
+        const inventoryModal = document.getElementById('inventoryModal');
 
         // Bắt sự kiện PointerLock khi người chơi kích hoạt/thoát (Chỉ trên PC)
         this.player.controls.addEventListener('lock', () => {
