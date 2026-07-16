@@ -149,48 +149,85 @@ class Player {
      * Lập trình thu thập sự kiện Joystick và chạm xoay camera trên di động
      */
     setupTouchInput() {
-        // A. Xoay góc nhìn camera (vuốt ngón tay bên ngoài vùng điều khiển)
+        // ID ngón tay cảm ứng cho camera xoay nhìn và joystick di chuyển
+        this.activeLookTouchId = null;
+        this.activeJoystickTouchId = null;
+
+        // A. Xoay góc nhìn camera (Hỗ trợ Đa điểm - Multi-touch)
         window.addEventListener('touchstart', (event) => {
-            const target = event.target;
-            // Bỏ qua các sự kiện chạm vào joystick, cụm phím hành động di động, hoặc thanh HUD
-            if (target.closest('#joystickZone') || target.closest('#mobileActionButtons') || target.closest('#hud') || target.closest('.modal') || target.closest('.overlay-screen')) {
-                return;
+            for (let i = 0; i < event.changedTouches.length; i++) {
+                const touch = event.changedTouches[i];
+                const target = touch.target;
+                
+                // Bỏ qua các sự kiện chạm vào UI điều khiển hoặc Menu
+                if (target.closest('#joystickZone') || 
+                    target.closest('#mobileActionButtons') || 
+                    target.closest('#hud') || 
+                    target.closest('.modal') || 
+                    target.closest('.overlay-screen') ||
+                    target.closest('#mobilePauseBtn')) {
+                    continue;
+                }
+                
+                // Nếu chưa gán ngón tay nào xoay camera thì nhận chạm này
+                if (this.activeLookTouchId === null) {
+                    this.activeLookTouchId = touch.identifier;
+                    this.touchLookActive = true;
+                    this.touchPrevPos.set(touch.clientX, touch.clientY);
+                    break;
+                }
             }
-            
-            const touch = event.touches[0];
-            this.touchLookActive = true;
-            this.touchPrevPos.set(touch.clientX, touch.clientY);
         }, { passive: true });
 
         window.addEventListener('touchmove', (event) => {
-            if (!this.touchLookActive) return;
+            if (!this.touchLookActive || this.activeLookTouchId === null) return;
             
-            const touch = event.touches[0];
-            const deltaX = touch.clientX - this.touchPrevPos.x;
-            const deltaY = touch.clientY - this.touchPrevPos.y;
+            // Tìm ngón tay vuốt xoay camera tương ứng
+            let lookTouch = null;
+            for (let i = 0; i < event.touches.length; i++) {
+                if (event.touches[i].identifier === this.activeLookTouchId) {
+                    lookTouch = event.touches[i];
+                    break;
+                }
+            }
             
-            // Xoay camera (Độ nhạy ngón tay vuốt 0.005)
-            const sensitivity = 0.005;
-            this.camera.rotation.y -= deltaX * sensitivity;
-            this.camera.rotation.x -= deltaY * sensitivity;
-            
-            // Giới hạn góc ngước lên/cúi xuống đầu (Tránh lộn ngửa camera)
-            const maxPitch = Math.PI / 2 - 0.05;
-            this.camera.rotation.x = Math.max(-maxPitch, Math.min(maxPitch, this.camera.rotation.x));
-            
-            this.touchPrevPos.set(touch.clientX, touch.clientY);
+            if (lookTouch) {
+                const deltaX = lookTouch.clientX - this.touchPrevPos.x;
+                const deltaY = lookTouch.clientY - this.touchPrevPos.y;
+                
+                // Xoay camera (Độ nhạy 0.0055)
+                const sensitivity = 0.0055;
+                this.camera.rotation.y -= deltaX * sensitivity;
+                this.camera.rotation.x -= deltaY * sensitivity;
+                
+                // Giới hạn góc ngước đầu tránh lật ngửa camera
+                const maxPitch = Math.PI / 2 - 0.05;
+                this.camera.rotation.x = Math.max(-maxPitch, Math.min(maxPitch, this.camera.rotation.x));
+                
+                this.touchPrevPos.set(lookTouch.clientX, lookTouch.clientY);
+            }
         }, { passive: true });
 
-        window.addEventListener('touchend', () => {
-            this.touchLookActive = false;
-        }, { passive: true });
+        const endLookTouch = (event) => {
+            if (this.activeLookTouchId === null) return;
+            
+            for (let i = 0; i < event.changedTouches.length; i++) {
+                if (event.changedTouches[i].identifier === this.activeLookTouchId) {
+                    this.touchLookActive = false;
+                    this.activeLookTouchId = null;
+                    break;
+                }
+            }
+        };
+
+        window.addEventListener('touchend', endLookTouch, { passive: true });
+        window.addEventListener('touchcancel', endLookTouch, { passive: true });
 
         // B. Nút Nhảy ảo trên di động
         const jumpBtn = document.getElementById('mobileJumpBtn');
         if (jumpBtn) {
-            // Dùng touchstart và touchend để mô phỏng nhấn phím Space
             jumpBtn.addEventListener('touchstart', (event) => {
-                event.preventDefault(); // Tránh trễ click 300ms của mobile
+                event.preventDefault();
                 this.keys.up = true;
             });
             jumpBtn.addEventListener('touchend', (event) => {
@@ -206,7 +243,6 @@ class Player {
         const mobileControls = document.getElementById('mobileControls');
 
         if (joystickZone && joystickContainer && joystickHandle && mobileControls) {
-            // Hiện HUD tay cầm di động
             mobileControls.classList.remove('hidden');
 
             const calculateCenter = () => {
@@ -216,23 +252,40 @@ class Player {
 
             joystickZone.addEventListener('touchstart', (event) => {
                 calculateCenter();
+                const touch = event.changedTouches[0];
+                this.activeJoystickTouchId = touch.identifier;
                 this.joystickActive = true;
-                
-                const touch = event.touches[0];
                 this.updateJoystickPosition(touch.clientX, touch.clientY, joystickHandle);
             }, { passive: true });
 
             joystickZone.addEventListener('touchmove', (event) => {
-                if (!this.joystickActive) return;
+                if (!this.joystickActive || this.activeJoystickTouchId === null) return;
                 
-                const touch = event.touches[0];
-                this.updateJoystickPosition(touch.clientX, touch.clientY, joystickHandle);
+                let joyTouch = null;
+                for (let i = 0; i < event.touches.length; i++) {
+                    if (event.touches[i].identifier === this.activeJoystickTouchId) {
+                        joyTouch = event.touches[i];
+                        break;
+                    }
+                }
+                
+                if (joyTouch) {
+                    this.updateJoystickPosition(joyTouch.clientX, joyTouch.clientY, joystickHandle);
+                }
             }, { passive: true });
 
-            const resetJoystick = () => {
-                this.joystickActive = false;
-                this.joystickVector.set(0, 0);
-                joystickHandle.style.transform = 'translate(0px, 0px)';
+            const resetJoystick = (event) => {
+                if (this.activeJoystickTouchId === null) return;
+                
+                for (let i = 0; i < event.changedTouches.length; i++) {
+                    if (event.changedTouches[i].identifier === this.activeJoystickTouchId) {
+                        this.joystickActive = false;
+                        this.activeJoystickTouchId = null;
+                        this.joystickVector.set(0, 0);
+                        joystickHandle.style.transform = 'translate(0px, 0px)';
+                        break;
+                    }
+                }
             };
 
             joystickZone.addEventListener('touchend', resetJoystick, { passive: true });

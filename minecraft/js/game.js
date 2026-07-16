@@ -175,12 +175,43 @@ class Game {
             renderDistanceVal.textContent = renderDistanceInput.value;
         });
 
+        // Hỗ trợ Toàn màn hình (Fullscreen) cho di động để ẩn thanh địa chỉ/tab tìm kiếm
+        const enterFullScreen = () => {
+            const docElm = document.documentElement;
+            if (docElm.requestFullscreen) {
+                docElm.requestFullscreen().catch(() => {});
+            } else if (docElm.webkitRequestFullscreen) {
+                docElm.webkitRequestFullscreen();
+            } else if (docElm.mozRequestFullScreen) {
+                docElm.mozRequestFullScreen();
+            } else if (docElm.msRequestFullscreen) {
+                docElm.msRequestFullscreen();
+            }
+        };
+
+        const exitFullScreen = () => {
+            if (document.fullscreenElement || document.webkitFullscreenElement) {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(() => {});
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        };
+
         // Nút "Chơi ngay" & "Tiếp tục" -> Bắt đầu chơi (Bỏ qua khóa chuột nếu là di động)
         const enterGame = () => {
             if (this.player.isTouchDevice) {
                 startScreen.classList.add('hidden');
                 pauseScreen.classList.add('hidden');
                 this.gamePlaying = true;
+                
+                // Kích hoạt toàn màn hình
+                enterFullScreen();
                 
                 const pauseBtn = document.getElementById('mobilePauseBtn');
                 if (pauseBtn) pauseBtn.classList.add('show-btn');
@@ -253,6 +284,9 @@ class Game {
                 
                 if (this.mobManager) this.mobManager.clearAll();
                 
+                // Thoát toàn màn hình khi thoát game
+                exitFullScreen();
+                
                 // Trả về màn hình chính
                 this.gamePlaying = false;
                 startScreen.classList.remove('hidden');
@@ -269,6 +303,10 @@ class Game {
             const pauseBtn = document.getElementById('mobilePauseBtn');
             if (pauseBtn) pauseBtn.classList.remove('show-btn');
             if (this.mobManager) this.mobManager.clearAll();
+            
+            // Thoát toàn màn hình khi về màn hình chính
+            exitFullScreen();
+            
             pauseScreen.classList.add('hidden');
             startScreen.classList.remove('hidden');
         });
@@ -391,27 +429,28 @@ class Game {
             const canvas = slot.querySelector('.slot-icon');
             const index = parseInt(slot.dataset.slot);
             const itemId = this.hotbarBlocks[index];
-            
-            // Vẽ lại biểu tượng (khối 3D hoặc dụng cụ)
-            TextureGenerator.drawBlockIcon(canvas, itemId);
-            
-            // Cập nhật nhãn số lượng vật phẩm
             const countSpan = slot.querySelector('.slot-count');
-            if (countSpan) {
-                if (this.player.gameMode === 'creative') {
-                    countSpan.textContent = '∞';
-                    slot.style.opacity = '1.0';
-                } else {
-                    const qty = this.player.inventory[itemId] || 0;
-                    countSpan.textContent = `x${qty}`;
-                    
-                    // Làm mờ slot nếu số lượng = 0 để người chơi nhận biết đã dùng hết
-                    if (qty === 0) {
-                        slot.style.opacity = '0.4';
-                    } else {
-                        slot.style.opacity = '1.0';
-                    }
+            
+            const isCreative = (this.player.gameMode === 'creative');
+            const qty = isCreative ? Infinity : (this.player.inventory[itemId] || 0);
+            
+            if (qty > 0 || isCreative) {
+                // A. Có đồ hoặc chế độ Sáng tạo -> vẽ icon bình thường
+                slot.classList.remove('empty');
+                TextureGenerator.drawBlockIcon(canvas, itemId);
+                if (countSpan) {
+                    countSpan.textContent = isCreative ? '∞' : `x${qty}`;
                 }
+                slot.style.opacity = '1.0';
+            } else {
+                // B. Ô trống (chưa có đồ trong Sinh tồn) -> đổi thành màu trắng trong suốt và xóa hình vẽ
+                slot.classList.add('empty');
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                if (countSpan) {
+                    countSpan.textContent = ''; // Ẩn nhãn x0 đi
+                }
+                slot.style.opacity = '1.0'; // Giữ độ sáng ô trắng
             }
         });
     }
@@ -1211,7 +1250,8 @@ class Game {
         this.player.postPhysicsUpdate(dt);
 
         // 2.8 Cập nhật quái vật Zombie
-        if (this.mobManager && this.gamePlaying) {
+        const isGameInputActive = this.player.controls.isLocked || (this.player.isTouchDevice && this.gamePlaying);
+        if (this.mobManager && isGameInputActive) {
             this.mobManager.update(this.player, dt);
         }
 

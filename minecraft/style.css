@@ -626,10 +626,8 @@ body, html {
     transform: scale(0.92);
 }
 
-@media (max-width: 768px) {
-    #mobilePauseBtn.show-btn {
-        display: flex; /* Chỉ hiện trên thiết bị nhỏ khi game đang chơi */
-    }
+#mobilePauseBtn.show-btn {
+    display: flex !important; /* Hiện nút trên mọi màn hình di động khi game bắt đầu */
 }
 
 /* Trạng thái ẩn/hiện chung */
@@ -765,4 +763,11 @@ body, html {
 .btn-craft.active:active {
     transform: translateY(2px);
     box-shadow: 0 1px 0px #386725;
+}
+
+/* Định dạng ô trống Hotbar màu trắng trong suốt */
+.hotbar-slot.empty {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border: 2px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.15) !important;
 }
