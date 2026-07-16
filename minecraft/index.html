@@ -2,6 +2,53 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
+    <!-- Bộ chẩn đoán lỗi trực quan tự động trên màn hình -->
+    <script>
+        window.addEventListener('error', function(event) {
+            const errorDiv = document.createElement('div');
+            errorDiv.style.position = 'fixed';
+            errorDiv.style.top = '0';
+            errorDiv.style.left = '0';
+            errorDiv.style.width = '100%';
+            errorDiv.style.backgroundColor = 'rgba(235, 94, 85, 0.98)';
+            errorDiv.style.color = '#fff';
+            errorDiv.style.padding = '20px';
+            errorDiv.style.fontSize = '13px';
+            errorDiv.style.fontFamily = 'monospace';
+            errorDiv.style.zIndex = '999999';
+            errorDiv.style.whiteSpace = 'pre-wrap';
+            errorDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.6)';
+            errorDiv.style.lineHeight = '1.6';
+            errorDiv.style.borderBottom = '3px solid #b33939';
+            
+            errorDiv.innerHTML = `<h3 style="margin-top:0; color:#fff;">❌ LỖI HỆ THỐNG TRONG GAME</h3>` +
+                                  `<strong>Lỗi:</strong> ${event.message}<br>` +
+                                  `<strong>Đường dẫn:</strong> ${event.filename}<br>` +
+                                  `<strong>Dòng:</strong> ${event.lineno} : ${event.colno}`;
+            document.body.appendChild(errorDiv);
+        });
+        window.addEventListener('unhandledrejection', function(event) {
+            const errorDiv = document.createElement('div');
+            errorDiv.style.position = 'fixed';
+            errorDiv.style.top = '0';
+            errorDiv.style.left = '0';
+            errorDiv.style.width = '100%';
+            errorDiv.style.backgroundColor = 'rgba(235, 94, 85, 0.98)';
+            errorDiv.style.color = '#fff';
+            errorDiv.style.padding = '20px';
+            errorDiv.style.fontSize = '13px';
+            errorDiv.style.fontFamily = 'monospace';
+            errorDiv.style.zIndex = '999999';
+            errorDiv.style.whiteSpace = 'pre-wrap';
+            errorDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.6)';
+            errorDiv.style.lineHeight = '1.6';
+            errorDiv.style.borderBottom = '3px solid #b33939';
+            
+            errorDiv.innerHTML = `<h3 style="margin-top:0; color:#fff;">❌ LỖI HỆ THỐNG TRONG GAME</h3>` +
+                                  `<strong>Lỗi Promise:</strong> ${event.reason}`;
+            document.body.appendChild(errorDiv);
+        });
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Minecraft 3D Web - Voxel Engine</title>
     <meta name="description" content="Một trò chơi Minecraft 3D chạy trực tiếp trên trình duyệt sử dụng HTML5, CSS3, JavaScript và Three.js.">
@@ -9,7 +56,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2.1">
 </head>
 <body>
     <!-- Hiệu ứng chớp đỏ khi mất máu -->
@@ -251,12 +298,12 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
 
     <!-- Nạp mã nguồn chia nhỏ của trò chơi -->
-    <script src="js/noise.js"></script>
-    <script src="js/textures.js"></script>
-    <script src="js/world.js"></script>
-    <script src="js/physics.js"></script>
-    <script src="js/player.js"></script>
-    <script src="js/mobs.js"></script>
-    <script src="js/game.js"></script>
+    <script src="js/noise.js?v=2.1"></script>
+    <script src="js/textures.js?v=2.1"></script>
+    <script src="js/world.js?v=2.1"></script>
+    <script src="js/physics.js?v=2.1"></script>
+    <script src="js/player.js?v=2.1"></script>
+    <script src="js/mobs.js?v=2.1"></script>
+    <script src="js/game.js?v=2.1"></script>
 </body>
 </html>
