@@ -26,11 +26,12 @@ class ItemDrop {
         
         // Tạo Mesh hộp nhỏ đại diện cho vật phẩm rơi (Kích thước 0.18)
         const geometry = new THREE.BoxGeometry(0.18, 0.18, 0.18);
-        const material = new THREE.MeshLambertMaterial({ color: color });
+        const material = new THREE.MeshBasicMaterial({ color: color });
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.castShadow = true;
         this.mesh.position.copy(this.position);
         
+        this.spawnTime = Date.now(); // Ghi nhận thời gian sinh vật thể
         this.scene.add(this.mesh);
     }
     
@@ -44,7 +45,11 @@ class ItemDrop {
         const targetPos = player.position.clone().add(new THREE.Vector3(0, 0.8, 0));
         const dist = this.position.distanceTo(targetPos);
         
-        if (dist < 8.0) {
+        // Tính tuổi thọ của vật phẩm rơi
+        const age = (Date.now() - this.spawnTime) / 1000;
+        
+        // Tạo độ trễ nhặt đồ 0.5 giây chuẩn Minecraft để vật phẩm văng ra rơi xuống đất trước, tránh biến mất lập tức
+        if (age > 0.5 && dist < 8.0) {
             // 1. Hiệu ứng từ trường hút vật phẩm về phía người chơi khi ở gần
             const direction = new THREE.Vector3().subVectors(targetPos, this.position).normalize();
             
