@@ -1269,7 +1269,6 @@ class Game {
         this.updateDayNightCycle(dt);
 
         // 6. Cập nhật sinh các mảnh chunk mới quanh người chơi
-        const isGameInputActive = this.player.controls.isLocked || (this.player.isTouchDevice && this.gamePlaying);
         if (isGameInputActive) {
             this.world.updateChunks(this.player.position.x, this.player.position.z);
         }
