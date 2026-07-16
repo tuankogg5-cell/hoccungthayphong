@@ -415,6 +415,10 @@ const TextureGenerator = {
             this.drawPickaxeIcon(ctx, w, h);
             return;
         }
+        if (blockId === 'stick') {
+            this.drawStickIcon(ctx, w, h);
+            return;
+        }
 
         // B. Nếu là Khối voxel (1-18)
         const textures = this.blockTextures[blockId];
@@ -588,6 +592,25 @@ const TextureGenerator = {
             [22,9], [23,10]
         ];
         headLight.forEach(pt => ctx.fillRect(pt[0], pt[1], 2, 2));
+        
+        ctx.restore();
+    },
+
+    /**
+     * Vẽ Gậy Gỗ dạng Pixel Art
+     */
+    drawStickIcon(ctx, w, h) {
+        ctx.save();
+        ctx.scale(w / 32, h / 32);
+        
+        // Cán gỗ diagonal từ (8,22) -> (22,8)
+        ctx.fillStyle = '#865439'; // Nâu
+        const pixels = [
+            [8,22], [9,21], [10,20], [11,19], [12,18], [13,17],
+            [14,16], [15,15], [16,14], [17,13], [18,12], [19,11],
+            [20,10], [21,9], [22,8]
+        ];
+        pixels.forEach(pt => ctx.fillRect(pt[0], pt[1], 2, 2));
         
         ctx.restore();
     },

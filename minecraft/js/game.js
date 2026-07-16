@@ -46,6 +46,7 @@ class Game {
 
         // Quản lý sinh quái và điểm hồi sinh (Spawnpoint)
         this.mobManager = null;
+        this.itemDrops = []; // Lưu trữ các vật phẩm rơi tự do trên đất
         this.spawnPoint = new THREE.Vector3(8, 0, 8);
 
         // Cố định màn hình di động: Chặn kéo trang web khi chơi game trên di động
@@ -247,6 +248,8 @@ class Game {
                 survivalModeBtn.classList.remove('active');
                 this.player.setGameMode('creative');
                 if (this.mobManager) this.mobManager.clearAll();
+                this.itemDrops.forEach(d => this.scene.remove(d.mesh));
+                this.itemDrops = [];
                 this.player.showSystemMessage("Đã chuyển sang Sáng tạo");
             });
 
@@ -261,6 +264,8 @@ class Game {
                         this.mobManager.spawnRandomZombie(this.player);
                     }
                 }
+                this.itemDrops.forEach(d => this.scene.remove(d.mesh));
+                this.itemDrops = [];
                 this.player.showSystemMessage("Đã chuyển sang Sinh tồn");
             });
         }
@@ -273,6 +278,8 @@ class Game {
             respawnBtn.addEventListener('click', () => {
                 this.player.respawn(this.spawnPoint);
                 if (this.mobManager) this.mobManager.clearAll();
+                this.itemDrops.forEach(d => this.scene.remove(d.mesh));
+                this.itemDrops = [];
                 enterGame();
             });
         }
@@ -283,6 +290,8 @@ class Game {
                 if (deathScreen) deathScreen.classList.add('hidden');
                 
                 if (this.mobManager) this.mobManager.clearAll();
+                this.itemDrops.forEach(d => this.scene.remove(d.mesh));
+                this.itemDrops = [];
                 
                 // Thoát toàn màn hình khi thoát game
                 exitFullScreen();
@@ -303,6 +312,8 @@ class Game {
             const pauseBtn = document.getElementById('mobilePauseBtn');
             if (pauseBtn) pauseBtn.classList.remove('show-btn');
             if (this.mobManager) this.mobManager.clearAll();
+            this.itemDrops.forEach(d => this.scene.remove(d.mesh));
+            this.itemDrops = [];
             
             // Thoát toàn màn hình khi về màn hình chính
             exitFullScreen();
@@ -602,7 +613,7 @@ class Game {
                 }
             ];
 
-            // Vẽ danh sách công thức chế tạo
+            // Vẽ danh sách công thức chế tạo dạng hình ảnh trực quan (Visual Recipes Grid)
             const recipesGrid = document.getElementById('craftingRecipesGrid');
             if (recipesGrid) {
                 recipesGrid.innerHTML = '';
@@ -610,28 +621,112 @@ class Game {
                 recipes.forEach(recipe => {
                     const card = document.createElement('div');
                     card.className = 'recipe-card';
+                    card.style.display = 'flex';
+                    card.style.alignItems = 'center';
+                    card.style.justifyContent = 'space-between';
+                    card.style.background = 'rgba(0, 0, 0, 0.45)';
+                    card.style.border = '2px solid rgba(255, 255, 255, 0.08)';
+                    card.style.borderRadius = '8px';
+                    card.style.padding = '12px 16px';
+                    card.style.gap = '15px';
                     
-                    const info = document.createElement('div');
-                    info.className = 'recipe-info';
+                    // A. Kết quả chế tạo (Output)
+                    const outputWrapper = document.createElement('div');
+                    outputWrapper.style.display = 'flex';
+                    outputWrapper.style.flexDirection = 'column';
+                    outputWrapper.style.alignItems = 'center';
+                    outputWrapper.style.minWidth = '80px';
                     
-                    const title = document.createElement('div');
-                    title.className = 'recipe-title';
-                    title.textContent = recipe.name;
-                    info.appendChild(title);
+                    const outputCanvas = document.createElement('canvas');
+                    outputCanvas.width = 44;
+                    outputCanvas.height = 44;
                     
-                    const reqs = document.createElement('div');
-                    reqs.className = 'recipe-ingredients';
+                    const outputItemId = Object.keys(recipe.gives)[0];
+                    const outputQty = recipe.gives[outputItemId];
                     
-                    const reqParts = [];
+                    TextureGenerator.drawBlockIcon(outputCanvas, outputItemId);
+                    outputWrapper.appendChild(outputCanvas);
+                    
+                    const outputTitle = document.createElement('div');
+                    outputTitle.style.fontFamily = 'var(--font-pixel)';
+                    outputTitle.style.fontSize = '8px';
+                    outputTitle.style.color = '#fbc531';
+                    outputTitle.style.marginTop = '6px';
+                    outputTitle.style.textAlign = 'center';
+                    
+                    const cleanName = recipe.name.split(' (')[0];
+                    outputTitle.textContent = `${cleanName} (x${outputQty})`;
+                    outputWrapper.appendChild(outputTitle);
+                    
+                    card.appendChild(outputWrapper);
+                    
+                    // B. Mũi tên chỉ hướng chế tạo (Arrow)
+                    const arrow = document.createElement('div');
+                    arrow.style.fontFamily = 'var(--font-pixel)';
+                    arrow.style.fontSize = '12px';
+                    arrow.style.color = 'var(--primary-hover)';
+                    arrow.style.textShadow = '1px 1px 0px #000';
+                    arrow.textContent = '➡️';
+                    card.appendChild(arrow);
+                    
+                    // C. Danh sách nguyên liệu cần thiết (Ingredients List)
+                    const ingredientsContainer = document.createElement('div');
+                    ingredientsContainer.style.display = 'flex';
+                    ingredientsContainer.style.gap = '12px';
+                    ingredientsContainer.style.flex = '1';
+                    ingredientsContainer.style.flexWrap = 'wrap';
+                    ingredientsContainer.style.alignItems = 'center';
+                    
                     for (const [reqId, reqQty] of Object.entries(recipe.requires)) {
-                        const name = TextureGenerator.blockNames[reqId] || reqId;
-                        reqParts.push(`${name} (${reqQty})`);
+                        const ingWrapper = document.createElement('div');
+                        ingWrapper.style.position = 'relative';
+                        ingWrapper.style.width = '38px';
+                        ingWrapper.style.height = '38px';
+                        ingWrapper.style.background = 'rgba(255, 255, 255, 0.08)';
+                        ingWrapper.style.border = '1px solid rgba(255, 255, 255, 0.15)';
+                        ingWrapper.style.borderRadius = '4px';
+                        ingWrapper.style.display = 'flex';
+                        ingWrapper.style.justifyContent = 'center';
+                        ingWrapper.style.alignItems = 'center';
+                        
+                        const hasQty = this.player.inventory[reqId] || 0;
+                        const isSufficient = (hasQty >= reqQty);
+                        if (!isSufficient) {
+                            ingWrapper.style.borderColor = '#eb3b5a'; // Đỏ viền nếu thiếu
+                            ingWrapper.style.background = 'rgba(235, 59, 90, 0.08)';
+                        } else {
+                            ingWrapper.style.borderColor = 'rgba(85, 139, 47, 0.6)'; // Xanh viền nếu đủ
+                            ingWrapper.style.background = 'rgba(85, 139, 47, 0.08)';
+                        }
+                        
+                        const ingCanvas = document.createElement('canvas');
+                        ingCanvas.width = 30;
+                        ingCanvas.height = 30;
+                        TextureGenerator.drawBlockIcon(ingCanvas, reqId);
+                        ingWrapper.appendChild(ingCanvas);
+                        
+                        // Số lượng nguyên liệu: có sẵn / yêu cầu
+                        const qtySpan = document.createElement('span');
+                        qtySpan.style.position = 'absolute';
+                        qtySpan.style.bottom = '2px';
+                        qtySpan.style.right = '4px';
+                        qtySpan.style.fontFamily = 'var(--font-pixel)';
+                        qtySpan.style.fontSize = '8px';
+                        qtySpan.style.color = isSufficient ? '#fff' : '#eb3b5a';
+                        qtySpan.style.textShadow = '1px 1px 0px #000';
+                        qtySpan.textContent = `${hasQty}/${reqQty}`;
+                        
+                        ingWrapper.appendChild(qtySpan);
+                        
+                        const nameLabel = TextureGenerator.blockNames[reqId] || reqId;
+                        ingWrapper.title = `${nameLabel}: ${hasQty}/${reqQty}`;
+                        
+                        ingredientsContainer.appendChild(ingWrapper);
                     }
-                    reqs.textContent = "Yêu cầu: " + reqParts.join(', ');
-                    info.appendChild(reqs);
                     
-                    card.appendChild(info);
+                    card.appendChild(ingredientsContainer);
                     
+                    // D. Nút Chế tạo (Craft Button)
                     const btn = document.createElement('button');
                     btn.className = 'btn-craft';
                     btn.textContent = 'CHẾ TẠO';
@@ -981,9 +1076,11 @@ class Game {
             // Vẽ lại các chunk thay đổi ngay lập tức
             this.world.updateChunks(this.player.position.x, this.player.position.z);
 
-            // Sinh tồn: Nhặt khối đó vào balo túi đồ
+            // Sinh tồn: Tạo vật phẩm 3D rơi tự do
             if (this.player.gameMode === 'survival' && brokenBlockId > 0) {
-                this.player.addItem(brokenBlockId, 1);
+                const dropPos = new THREE.Vector3(x, y, z);
+                const drop = new ItemDrop(this.scene, this.world, brokenBlockId, dropPos);
+                this.itemDrops.push(drop);
             }
         }
     }
@@ -1254,6 +1351,17 @@ class Game {
         const isGameInputActive = this.player.controls.isLocked || (this.player.isTouchDevice && this.gamePlaying);
         if (this.mobManager && isGameInputActive) {
             this.mobManager.update(this.player, dt);
+        }
+
+        // 2.9 Cập nhật các vật phẩm rơi tự do (Item Drops) trên nền đất
+        if (isGameInputActive) {
+            for (let i = this.itemDrops.length - 1; i >= 0; i--) {
+                const drop = this.itemDrops[i];
+                drop.update(this.player, dt);
+                if (drop.isCollected) {
+                    this.itemDrops.splice(i, 1);
+                }
+            }
         }
 
         // 3. Cập nhật vị trí camera theo sát người chơi

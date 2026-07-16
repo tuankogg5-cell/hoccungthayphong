@@ -531,7 +531,7 @@ class Player {
     }
 
     /**
-     * Thêm vật phẩm vào kho đồ
+     * Thêm vật phẩm vào kho đồ (và tự động xếp vào slot Hotbar trống theo thứ tự)
      */
     addItem(itemId, amount = 1) {
         if (!this.inventory[itemId] && this.inventory[itemId] !== 0) {
@@ -544,19 +544,54 @@ class Player {
         const name = ItemNames[itemId] || itemId;
         this.showSystemMessage(`+${amount} ${name}`);
 
-        // Cập nhật giao diện Hotbar nếu có thay đổi vật phẩm
+        // Chế độ Sinh tồn: Tự động xếp vật phẩm vào Hotbar theo thứ tự từ trái qua phải
+        if (this.gameMode === 'survival' && window.gameInstance) {
+            const hotbar = window.gameInstance.hotbarBlocks;
+            
+            // 1. Kiểm tra xem vật phẩm này đã có ô nào sở hữu chưa
+            let existsInHotbar = false;
+            for (let i = 0; i < 9; i++) {
+                if (hotbar[i] === itemId) {
+                    existsInHotbar = true;
+                    break;
+                }
+            }
+            
+            // 2. Nếu là vật phẩm mới hoàn toàn -> Tìm ô trống đầu tiên (null/undefined) để chèn vào
+            if (!existsInHotbar) {
+                for (let i = 0; i < 9; i++) {
+                    if (hotbar[i] === null || hotbar[i] === undefined || hotbar[i] === '') {
+                        hotbar[i] = itemId;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Cập nhật giao diện Hotbar
         if (window.gameInstance) {
             window.gameInstance.updateHotbarHUD();
         }
     }
 
     /**
-     * Bớt vật phẩm khỏi kho đồ
+     * Bớt vật phẩm khỏi kho đồ (và dọn trống slot Hotbar nếu hết tài nguyên)
      */
     removeItem(itemId, amount = 1) {
         if (!this.inventory[itemId]) return;
         this.inventory[itemId] = Math.max(0, this.inventory[itemId] - amount);
         
+        // Nếu số lượng về 0 -> giải phóng ô Hotbar tương ứng về null (trống trong suốt)
+        if (this.gameMode === 'survival' && this.inventory[itemId] === 0 && window.gameInstance) {
+            const hotbar = window.gameInstance.hotbarBlocks;
+            for (let i = 0; i < 9; i++) {
+                if (hotbar[i] === itemId) {
+                    hotbar[i] = null;
+                    break;
+                }
+            }
+        }
+
         if (window.gameInstance) {
             window.gameInstance.updateHotbarHUD();
         }
@@ -587,7 +622,7 @@ class Player {
             this.removeItem(itemId, qty);
         }
 
-        // Cộng sản phẩm nhận được
+        // Cộng sản phẩm nhận được (addItem sẽ tự xếp vào Hotbar)
         for (const [itemId, qty] of Object.entries(recipe.gives)) {
             this.addItem(itemId, qty);
         }
@@ -605,8 +640,18 @@ class Player {
             this.flightMode = false;
             this.hp = this.maxHp;
             this.initInventory(); // Bắt đầu Sinh tồn với 0 block đúng yêu cầu
+            
+            if (window.gameInstance) {
+                // Sinh tồn: Khởi đầu với 9 ô Hotbar trống trơn màu trắng trong suốt
+                window.gameInstance.hotbarBlocks = [null, null, null, null, null, null, null, null, null];
+            }
         } else {
             this.hp = this.maxHp; // Sáng tạo bất tử
+            
+            if (window.gameInstance) {
+                // Sáng tạo: trang bị sẵn các block cơ bản vào Hotbar
+                window.gameInstance.hotbarBlocks = [1, 2, 3, 4, 10, 9, 7, 'stone_sword', 'stone_pickaxe'];
+            }
         }
         this.updateHealthHUD();
         if (window.gameInstance) {
