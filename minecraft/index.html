@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft 3D Web - Voxel Engine</title>
+    <meta name="description" content="Một trò chơi Minecraft 3D chạy trực tiếp trên trình duyệt sử dụng HTML5, CSS3, JavaScript và Three.js.">
+    <!-- Google Fonts: Outfits cho giao diện hiện đại & Press Start 2P cho chữ phong cách pixel -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Crosshair (Tâm ngắm) -->
+    <div id="crosshair">+</div>
+
+    <!-- HUD: Hotbar (Thanh phím tắt chọn khối) -->
+    <div id="hud">
+        <div id="hotbar">
+            <!-- 9 Slots cho các loại khối -->
+            <div class="hotbar-slot active" data-slot="0" data-block-id="1">
+                <canvas class="slot-icon" width="32" height="32"></canvas>
+                <span class="slot-num">1</span>
+            </div>
+            <div class="hotbar-slot" data-slot="1" data-block-id="2">
+                <canvas class="slot-icon" width="32" height="32"></canvas>
+                <span class="slot-num">2</span>
+            </div>
+            <div class="hotbar-slot" data-slot="2" data-block-id="3">
+                <canvas class="slot-icon" width="32" height="32"></canvas>
+                <span class="slot-num">3</span>
+            </div>
+            <div class="hotbar-slot" data-slot="3" data-block-id="4">
+                <canvas class="slot-icon" width="32" height="32"></canvas>
+                <span class="slot-num">4</span>
+            </div>
+            <div class="hotbar-slot" data-slot="4" data-block-id="5">
+                <canvas class="slot-icon" width="32" height="32"></canvas>
+                <span class="slot-num">5</span>
+            </div>
+            <div class="hotbar-slot" data-slot="5" data-block-id="6">
+                <canvas class="slot-icon" width="32" height="32"></canvas>
+                <span class="slot-num">6</span>
+            </div>
+            <div class="hotbar-slot" data-slot="6" data-block-id="7">
+                <canvas class="slot-icon" width="32" height="32"></canvas>
+                <span class="slot-num">7</span>
+            </div>
+            <div class="hotbar-slot" data-slot="7" data-block-id="8">
+                <canvas class="slot-icon" width="32" height="32"></canvas>
+                <span class="slot-num">8</span>
+            </div>
+            <div class="hotbar-slot" data-slot="8" data-block-id="9">
+                <canvas class="slot-icon" width="32" height="32"></canvas>
+                <span class="slot-num">9</span>
+            </div>
+        </div>
+        <div id="block-name">Đang chọn: Khối Cỏ</div>
+    </div>
+
+    <!-- Màn hình chính bắt đầu (Start Screen) -->
+    <div id="startScreen" class="overlay-screen">
+        <div class="menu-container glass-panel">
+            <h1 class="game-logo">MINECRAFT</h1>
+            <h2 class="game-subtitle">WEB EDITION 3D</h2>
+            
+            <div class="menu-buttons">
+                <button id="playBtn" class="btn btn-primary">CHƠI NGAY</button>
+                <button id="controlsBtn" class="btn btn-secondary">HƯỚNG DẪN</button>
+                <button id="settingsBtn" class="btn btn-secondary">CÀI ĐẶT</button>
+            </div>
+            
+            <div class="footer-credit">Được xây dựng bằng Three.js &bull; Antigravity AI</div>
+        </div>
+    </div>
+
+    <!-- Màn hình Tạm dừng (Pause Screen) -->
+    <div id="pauseScreen" class="overlay-screen hidden">
+        <div class="menu-container glass-panel">
+            <h1 class="menu-title">TẠM DỪNG</h1>
+            
+            <div class="menu-buttons">
+                <button id="resumeBtn" class="btn btn-primary">TIẾP TỤC CHƠI</button>
+                <button id="pauseSettingsBtn" class="btn btn-secondary">CÀI ĐẶT</button>
+                <button id="quitBtn" class="btn btn-danger">MÀN HÌNH CHÍNH</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bảng Hướng dẫn điều khiển (Controls Panel) -->
+    <div id="controlsModal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <span class="close-btn" id="closeControls">&times;</span>
+            <h2>Phím Điều Khiển</h2>
+            <div class="controls-grid">
+                <div class="control-item"><span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span> <span>Di chuyển</span></div>
+                <div class="control-item"><span class="key">Space</span> <span>Nhảy (Lên)</span></div>
+                <div class="control-item"><span class="key">Left Click</span> <span>Phá khối (Đào)</span></div>
+                <div class="control-item"><span class="key">Right Click</span> <span>Đặt khối</span></div>
+                <div class="control-item"><span class="key">Con lăn chuột</span> <span>Đổi khối trên thanh Hotbar</span></div>
+                <div class="control-item"><span class="key">1</span> - <span class="key">9</span> <span>Chọn khối trực tiếp</span></div>
+                <div class="control-item"><span class="key">F</span> <span>Bật/Tắt chế độ bay</span></div>
+                <div class="control-item"><span class="key">Shift</span> <span>Hạ độ cao (khi bay)</span></div>
+                <div class="control-item"><span class="key">Esc</span> <span>Mở Menu / Tạm dừng / Thoát khóa chuột</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bảng Cài đặt (Settings Panel) -->
+    <div id="settingsModal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <span class="close-btn" id="closeSettings">&times;</span>
+            <h2>Cài Đặt Game</h2>
+            <div class="settings-form">
+                <div class="setting-item">
+                    <label for="renderDistance">Tầm nhìn (Chunks):</label>
+                    <input type="range" id="renderDistance" min="2" max="6" value="4">
+                    <span id="renderDistanceVal">4</span>
+                </div>
+                <div class="setting-item">
+                    <label for="flightMode">Chế độ bay:</label>
+                    <input type="checkbox" id="flightMode">
+                </div>
+                <div class="setting-item">
+                    <label for="dayNight">Chu kỳ ngày đêm:</label>
+                    <input type="checkbox" id="dayNight" checked>
+                </div>
+                <div class="setting-item">
+                    <label for="fogEnabled">Sương mù:</label>
+                    <input type="checkbox" id="fogEnabled" checked>
+                </div>
+                <button id="saveSettingsBtn" class="btn btn-primary" style="margin-top: 20px;">LƯU CÀI ĐẶT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tải các thư viện Three.js cần thiết từ CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
+
+    <!-- Nạp mã nguồn chia nhỏ của trò chơi -->
+    <script src="js/noise.js"></script>
+    <script src="js/textures.js"></script>
+    <script src="js/world.js"></script>
+    <script src="js/physics.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>
