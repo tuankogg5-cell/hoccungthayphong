@@ -164,7 +164,19 @@
     <div id="pauseScreen" class="overlay-screen hidden">
         <div class="menu-container glass-panel">
             <h1 class="menu-title">TẠM DỪNG</h1>
-            
+
+            <!-- Save/Load area -->
+            <div class="save-area">
+                <div class="save-row">
+                    <button id="saveGameBtn" class="btn btn-save">💾 Lưu Game</button>
+                    <button id="loadGameBtn" class="btn btn-save">📂 Tải Game</button>
+                </div>
+                <div class="save-row">
+                    <span id="autoSaveCountdown" class="auto-save-txt">Auto-save: 30s</span>
+                    <button id="deleteSaveBtn" class="btn btn-del-save">🗑️ Xóa Save</button>
+                </div>
+            </div>
+
             <div class="menu-buttons">
                 <button id="resumeBtn" class="btn btn-primary">TIẾP TỤC CHƠI</button>
                 <button id="pauseBodyTrackBtn" class="btn btn-body">🕺 BODY TRACKING</button>
@@ -174,6 +186,8 @@
         </div>
     </div>
 
+    <!-- Thông báo lưu game nổi góc màn hình -->
+    <div id="saveStatusMsg"></div>
 
     <!-- Bảng Hướng dẫn điều khiển (Controls Panel) -->
     <div id="controlsModal" class="modal hidden">
@@ -314,8 +328,11 @@
     <script src="js/player.js?v=2.1"></script>
     <script src="js/mobs.js?v=2.1"></script>
     <script src="js/drops.js?v=2.1"></script>
+    <script src="js/savemanager.js?v=1.0"></script>
+    <script src="js/minimap.js?v=1.0"></script>
+    <script src="js/questmanager.js?v=1.0"></script>
     <script src="js/bodytracking.js?v=1.0"></script>
-    <script src="js/game.js?v=2.1"></script>
+    <script src="js/game.js?v=2.2"></script>
 
     <!-- Khởi động nút Body Tracking -->
     <script>
@@ -324,7 +341,6 @@
                 alert('Game chưa tải xong, thử lại sau vài giây!'); 
                 return; 
             }
-            // Tắt instance cũ nếu có
             if (window.bodyTrackerInstance) {
                 window.bodyTrackerInstance.destroy();
             }
@@ -333,26 +349,35 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Nút ở màn hình chính
+            // ---- Body Tracking buttons ----
             const bodyTrackBtn = document.getElementById('bodyTrackBtn');
             if (bodyTrackBtn) {
                 bodyTrackBtn.addEventListener('click', startBodyTracking);
-                bodyTrackBtn.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    startBodyTracking();
-                }, { passive: false });
+                bodyTrackBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startBodyTracking(); }, { passive: false });
             }
-            // Nút ở menu tạm dừng
             const pauseBodyTrackBtn = document.getElementById('pauseBodyTrackBtn');
             if (pauseBodyTrackBtn) {
                 pauseBodyTrackBtn.addEventListener('click', startBodyTracking);
-                pauseBodyTrackBtn.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    startBodyTracking();
-                }, { passive: false });
+                pauseBodyTrackBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startBodyTracking(); }, { passive: false });
             }
+
+            // ---- Save / Load / Delete buttons ----
+            const saveGameBtn   = document.getElementById('saveGameBtn');
+            const loadGameBtn   = document.getElementById('loadGameBtn');
+            const deleteSaveBtn = document.getElementById('deleteSaveBtn');
+
+            const withSave = (fn) => () => {
+                if (window.gameInstance && window.gameInstance.saveManager) fn(window.gameInstance.saveManager);
+            };
+
+            if (saveGameBtn)   saveGameBtn.addEventListener('click',   withSave(sm => sm.save()));
+            if (loadGameBtn)   loadGameBtn.addEventListener('click',   withSave(sm => sm.load()));
+            if (deleteSaveBtn) deleteSaveBtn.addEventListener('click', withSave(sm => {
+                if (confirm('Xóa save? Thao tác không thể hoàn tác!')) sm.deleteSave();
+            }));
         });
     </script>
+
 </body>
 </html>
 

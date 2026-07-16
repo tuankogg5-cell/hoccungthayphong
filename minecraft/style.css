@@ -804,3 +804,283 @@ body, html {
     border: 2px solid rgba(255, 255, 255, 0.25) !important;
     box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.15) !important;
 }
+
+/* ============================================================
+   MINIMAP
+   ============================================================ */
+#minimapWrap {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 300;
+    background: rgba(8, 10, 20, 0.88);
+    border: 1px solid rgba(100, 200, 255, 0.25);
+    border-radius: 12px;
+    padding: 8px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 6px 24px rgba(0, 100, 200, 0.2);
+    user-select: none;
+    width: 176px;
+}
+.mm-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+.mm-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: #70ccff;
+    flex: 1;
+}
+.mm-coords {
+    font-family: monospace;
+    font-size: 9px;
+    color: #88bbcc;
+    white-space: nowrap;
+}
+.mm-toggle {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.12);
+    color: #aaa;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 11px;
+    cursor: pointer;
+    line-height: 1;
+}
+.mm-toggle:hover { background: rgba(255,255,255,.18); color: #fff; }
+#minimapCanvas {
+    display: block;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,.08);
+    width: 160px;
+    height: 160px;
+    image-rendering: pixelated;
+}
+
+/* ============================================================
+   QUEST PANEL
+   ============================================================ */
+#questPanel {
+    position: fixed;
+    bottom: 100px;
+    right: 14px;
+    width: 230px;
+    z-index: 300;
+    background: rgba(8, 10, 20, 0.88);
+    border: 1px solid rgba(255, 200, 80, 0.25);
+    border-radius: 12px;
+    padding: 10px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 6px 24px rgba(200, 150, 0, 0.15);
+    font-family: 'Outfit', sans-serif;
+    color: #eeddaa;
+    user-select: none;
+}
+.qp-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+.qp-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: #fbc531;
+    flex: 1;
+}
+.qp-toggle {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.12);
+    color: #aaa;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 11px;
+    cursor: pointer;
+}
+.qp-toggle:hover { background: rgba(255,255,255,.18); color: #fff; }
+.qp-progress-overall {
+    font-size: 10px;
+    color: #888;
+    margin-bottom: 8px;
+    text-align: center;
+}
+.qp-quest-card {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    background: rgba(255, 200, 50, 0.07);
+    border: 1px solid rgba(255, 200, 50, 0.18);
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 7px;
+}
+.qp-quest-icon { font-size: 22px; flex-shrink: 0; }
+.qp-quest-info { flex: 1; min-width: 0; }
+.qp-quest-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #fbc531;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.qp-quest-desc { font-size: 10px; color: #bba; margin-bottom: 5px; }
+.qp-bar-wrap {
+    background: rgba(255,255,255,.1);
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+    margin-bottom: 3px;
+}
+.qp-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #fbc531, #f9ca24);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+    box-shadow: 0 0 6px rgba(251, 197, 49, 0.6);
+}
+.qp-count { font-size: 9px; color: #aaa; }
+.qp-reward { font-size: 10px; color: #88cc88; }
+.qp-empty, .qp-all-done {
+    text-align: center;
+    font-size: 11px;
+    color: #88cc88;
+    padding: 8px 0;
+    line-height: 1.7;
+}
+
+/* ============================================================
+   QUEST COMPLETE BANNER (giữa màn hình, animate)
+   ============================================================ */
+#questCompleteBanner {
+    position: fixed;
+    top: 15%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-30px);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    pointer-events: none;
+}
+#questCompleteBanner.qcb-show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+#questCompleteBanner.qcb-hide {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-30px);
+}
+.qcb-inner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: linear-gradient(135deg, rgba(10,12,25,0.97) 0%, rgba(30,25,10,0.97) 100%);
+    border: 2px solid rgba(251, 197, 49, 0.6);
+    border-radius: 16px;
+    padding: 14px 24px;
+    box-shadow: 0 0 40px rgba(251, 197, 49, 0.35), 0 8px 32px rgba(0,0,0,0.6);
+    backdrop-filter: blur(12px);
+    min-width: 280px;
+}
+.qcb-icon { font-size: 36px; }
+.qcb-text { flex: 1; }
+.qcb-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: #fbc531;
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+}
+.qcb-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 3px;
+}
+.qcb-reward {
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    color: #88ee88;
+}
+
+/* ============================================================
+   SAVE / LOAD BUTTONS (trong Pause menu)
+   ============================================================ */
+.save-area {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+}
+.save-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.save-row:last-child { margin-bottom: 0; }
+.btn-save {
+    flex: 1;
+    background: rgba(30, 100, 200, 0.22);
+    border: 1px solid rgba(80, 160, 255, 0.35);
+    border-bottom: 3px solid rgba(40, 80, 180, 0.6);
+    color: #aaddff;
+    border-radius: 6px;
+    padding: 7px 0;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+}
+.btn-save:hover { background: rgba(50, 140, 255, 0.3); color: #fff; }
+.btn-del-save {
+    background: rgba(180, 30, 30, 0.18);
+    border: 1px solid rgba(255, 80, 80, 0.3);
+    border-bottom: 2px solid rgba(140, 20, 20, 0.5);
+    color: #ffaaaa;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-del-save:hover { background: rgba(255, 60, 60, 0.25); color: #fff; }
+.auto-save-txt {
+    flex: 1;
+    font-family: monospace;
+    font-size: 10px;
+    color: #888;
+}
+
+/* ============================================================
+   SAVE STATUS TOAST (góc dưới trái)
+   ============================================================ */
+#saveStatusMsg {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(0);
+    z-index: 2000;
+    background: rgba(8, 12, 24, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 8px 20px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: #22cc66;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.35s ease, transform 0.35s ease;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+}

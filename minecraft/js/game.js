@@ -52,6 +52,11 @@ class Game {
         this.itemDrops = []; // Lưu trữ các vật phẩm rơi tự do trên đất
         this.spawnPoint = new THREE.Vector3(8, 0, 8);
 
+        // === TÍNH NĂNG MỚI ===
+        this.saveManager  = null; // Lưu/Tải game (IndexedDB)
+        this.minimap      = null; // Bản đồ nhỏ
+        this.questManager = null; // Hệ thống nhiệm vụ
+
         // Cố định màn hình di động: Chặn kéo trang web khi chơi game trên di động
         document.addEventListener('touchmove', (event) => {
             if (this.gamePlaying) {
@@ -64,7 +69,12 @@ class Game {
         this.initUI();
         this.setupHotbarIcons();
         this.setupEventListeners();
-        
+
+        // Khởi tạo các tính năng mới
+        this.saveManager  = new SaveManager(this);
+        this.minimap      = new Minimap(this);
+        this.questManager = new QuestManager(this);
+
         // Bắt đầu vòng lặp render
         this.animate();
     }
@@ -1054,6 +1064,8 @@ class Game {
                 else if (heldItem === 'diamond_pickaxe') attackDamage = 7; // Cúp kim cương
                 
                 zombie.takeDamage(attackDamage, this.player.position);
+                // ── Hook Quest: báo giết zombie ──
+                if (zombie.isDead && this.questManager) this.questManager.onMobKill();
                 return true; // Đánh trúng quái vật, không đào khối đất phía sau
             }
         }
@@ -1167,6 +1179,10 @@ class Game {
             // Vẽ lại các chunk thay đổi ngay lập tức
             this.world.updateChunks(this.player.position.x, this.player.position.z);
 
+            // ── Hook: Lưu thay đổi + báo Quest ──
+            if (this.saveManager) this.saveManager.recordBlockChange(x, y, z, 0);
+            if (this.questManager && brokenBlockId > 0) this.questManager.onBlockBreak(brokenBlockId);
+
             // Sinh tồn: Tạo vật phẩm 3D rơi tự do
             if (this.player.gameMode === 'survival' && brokenBlockId > 0) {
                 const dropPos = new THREE.Vector3(x, y, z);
@@ -1245,6 +1261,10 @@ class Game {
             if (this.player.gameMode === 'survival') {
                 this.player.removeItem(blockToPlace, 1);
             }
+
+            // ── Hook: Lưu thay đổi + báo Quest ──
+            if (this.saveManager) this.saveManager.recordBlockChange(px, py, pz, blockToPlace);
+            if (this.questManager) this.questManager.onBlockPlace(blockToPlace);
 
             // Cập nhật thế giới
             this.world.updateChunks(this.player.position.x, this.player.position.z);
@@ -1447,6 +1467,11 @@ class Game {
         if (this.bodyTrackingMode && window.bodyTrackerInstance) {
             window.bodyTrackerInstance.applyToGame();
         }
+
+        // 0.5 Cập nhật các manager mới
+        if (this.saveManager)  this.saveManager.tick(dt);
+        if (this.minimap)      this.minimap.update(dt);
+        if (this.questManager) this.questManager.tickWalk();
 
         // 1. Cập nhật phím di chuyển
         this.player.updateInput();
