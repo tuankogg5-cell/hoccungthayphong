@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Minecraft 3D Web - Voxel Engine</title>
     <meta name="description" content="Một trò chơi Minecraft 3D chạy trực tiếp trên trình duyệt sử dụng HTML5, CSS3, JavaScript và Three.js.">
     <!-- Google Fonts: Outfits cho giao diện hiện đại & Press Start 2P cho chữ phong cách pixel -->
@@ -12,6 +12,9 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Hiệu ứng chớp đỏ khi mất máu -->
+    <div id="damageFlash" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 0, 0, 0); pointer-events: none; z-index: 40; transition: background-color 0.15s ease;"></div>
+
     <!-- Game Canvas -->
     <canvas id="gameCanvas"></canvas>
 
@@ -23,6 +26,9 @@
 
     <!-- HUD: Hotbar (Thanh phím tắt chọn khối) -->
     <div id="hud">
+        <!-- Thanh hiển thị Máu (Chỉ hiện ở Chế độ Sinh tồn) -->
+        <div id="healthBar" class="hidden"></div>
+
         <div id="hotbar">
             <!-- 9 Slots cho các loại khối -->
             <div class="hotbar-slot active" data-slot="0" data-block-id="1">
@@ -70,6 +76,14 @@
         <div class="menu-container glass-panel">
             <h1 class="game-logo">MINECRAFT</h1>
             <h2 class="game-subtitle">WEB EDITION 3D</h2>
+            
+            <div class="mode-selection" style="margin-bottom: 20px;">
+                <div style="font-family: 'Press Start 2P', monospace; font-size: 8px; color: #fbc531; margin-bottom: 12px;">CHỌN CHẾ ĐỘ CHƠI:</div>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button id="creativeModeBtn" class="btn btn-secondary mode-btn active" style="flex: 1; padding: 10px 5px; font-size: 9px; margin-bottom: 0;">SÁNG TẠO</button>
+                    <button id="survivalModeBtn" class="btn btn-secondary mode-btn" style="flex: 1; padding: 10px 5px; font-size: 9px; margin-bottom: 0;">SINH TỒN</button>
+                </div>
+            </div>
             
             <div class="menu-buttons">
                 <button id="playBtn" class="btn btn-primary">CHƠI NGAY</button>
@@ -157,6 +171,18 @@
         </div>
     </div>
 
+    <!-- Màn hình "Bạn đã chết" (You Died Screen) -->
+    <div id="deathScreen" class="overlay-screen hidden" style="background: radial-gradient(circle, rgba(120,0,0,0.6) 0%, rgba(0,0,0,0.95) 100%); z-index: 500;">
+        <div class="menu-container glass-panel" style="border-color: rgba(255, 0, 0, 0.2);">
+            <h1 class="game-logo" style="color: #ff3f3f; text-shadow: 4px 4px 0px #7f0000; animation: none; font-size: 28px;">BẠN ĐÃ CHẾT</h1>
+            <p style="font-family: 'Press Start 2P', monospace; font-size: 8px; color: #a4b0be; margin-bottom: 30px; text-shadow: 1px 1px 0px #000;">Steve đã bị hạ gục</p>
+            <div class="menu-buttons">
+                <button id="respawnBtn" class="btn btn-primary" style="background-color: #b33939; border-bottom: 4px solid #7c2222;">HỒI SINH</button>
+                <button id="deathQuitBtn" class="btn btn-secondary">MÀN HÌNH CHÍNH</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Tải các thư viện Three.js cần thiết từ CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
@@ -167,6 +193,7 @@
     <script src="js/world.js"></script>
     <script src="js/physics.js"></script>
     <script src="js/player.js"></script>
+    <script src="js/mobs.js"></script>
     <script src="js/game.js"></script>
 </body>
 </html>

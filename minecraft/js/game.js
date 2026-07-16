@@ -37,6 +37,17 @@ class Game {
         this.dayNightSpeed = 0.04; // Tốc độ trôi thời gian
         this.dayNightCycleEnabled = true;
 
+        // Quản lý sinh quái và điểm hồi sinh (Spawnpoint)
+        this.mobManager = null;
+        this.spawnPoint = new THREE.Vector3(8, 0, 8);
+
+        // Cố định màn hình di động: Chặn kéo trang web khi chơi game trên di động
+        document.addEventListener('touchmove', (event) => {
+            if (this.gamePlaying) {
+                event.preventDefault();
+            }
+        }, { passive: false });
+
         this.initThree();
         this.initGameComponents();
         this.initUI();
@@ -113,8 +124,13 @@ class Game {
         const spawnZ = 8;
         const noiseVal = this.world.noise.fbm2d(spawnX * 0.015, spawnZ * 0.015, 4, 0.5);
         const spawnY = Math.floor((noiseVal + 1) * 0.5 * 24) + 16;
-        this.player.position.set(spawnX, spawnY + 2, spawnZ);
+        
+        this.spawnPoint.set(spawnX, spawnY + 2, spawnZ);
+        this.player.position.copy(this.spawnPoint);
         this.player.updateCameraPosition();
+        
+        // 5. Khởi tạo MobManager quản lý Zombie
+        this.mobManager = new MobManager(this.scene, this.world);
         
         // Sinh dữ liệu các chunk ban đầu xung quanh người chơi
         this.world.updateChunks(this.player.position.x, this.player.position.z);
@@ -183,6 +199,59 @@ class Game {
             });
         }
 
+        // 1. Chuyển đổi Sáng tạo / Sinh tồn
+        const creativeModeBtn = document.getElementById('creativeModeBtn');
+        const survivalModeBtn = document.getElementById('survivalModeBtn');
+
+        if (creativeModeBtn && survivalModeBtn) {
+            creativeModeBtn.addEventListener('click', () => {
+                creativeModeBtn.classList.add('active');
+                survivalModeBtn.classList.remove('active');
+                this.player.setGameMode('creative');
+                if (this.mobManager) this.mobManager.clearAll();
+                this.player.showSystemMessage("Đã chuyển sang Sáng tạo");
+            });
+
+            survivalModeBtn.addEventListener('click', () => {
+                survivalModeBtn.classList.add('active');
+                creativeModeBtn.classList.remove('active');
+                this.player.setGameMode('survival');
+                if (this.mobManager) {
+                    this.mobManager.clearAll();
+                    // Sinh Zombie ngay lập tức để người chơi kiểm tra Sinh tồn
+                    for (let i = 0; i < 3; i++) {
+                        this.mobManager.spawnRandomZombie(this.player);
+                    }
+                }
+                this.player.showSystemMessage("Đã chuyển sang Sinh tồn");
+            });
+        }
+
+        // 2. Các nút ở màn hình cái chết (Death Screen)
+        const respawnBtn = document.getElementById('respawnBtn');
+        const deathQuitBtn = document.getElementById('deathQuitBtn');
+
+        if (respawnBtn) {
+            respawnBtn.addEventListener('click', () => {
+                this.player.respawn(this.spawnPoint);
+                if (this.mobManager) this.mobManager.clearAll();
+                enterGame();
+            });
+        }
+
+        if (deathQuitBtn) {
+            deathQuitBtn.addEventListener('click', () => {
+                const deathScreen = document.getElementById('deathScreen');
+                if (deathScreen) deathScreen.classList.add('hidden');
+                
+                if (this.mobManager) this.mobManager.clearAll();
+                
+                // Trả về màn hình chính
+                this.gamePlaying = false;
+                startScreen.classList.remove('hidden');
+            });
+        }
+
         playBtn.addEventListener('click', enterGame);
         resumeBtn.addEventListener('click', enterGame);
 
@@ -192,6 +261,7 @@ class Game {
             this.gamePlaying = false;
             const pauseBtn = document.getElementById('mobilePauseBtn');
             if (pauseBtn) pauseBtn.classList.remove('show-btn');
+            if (this.mobManager) this.mobManager.clearAll();
             pauseScreen.classList.add('hidden');
             startScreen.classList.remove('hidden');
         });
@@ -351,8 +421,11 @@ class Game {
             if (!isGameInputActive()) return;
             
             if (event.button === 0) {
-                // Chuột trái -> Phá khối
-                this.handleBlockBreak();
+                // Chuột trái -> Đánh quái trước, hụt mới phá đất
+                const hitMob = this.handleAttack();
+                if (!hitMob) {
+                    this.handleBlockBreak();
+                }
             } else if (event.button === 2) {
                 // Chuột phải -> Đặt khối
                 this.handleBlockPlace();
@@ -366,7 +439,10 @@ class Game {
         if (mobileBreakBtn) {
             mobileBreakBtn.addEventListener('touchstart', (event) => {
                 event.preventDefault();
-                if (isGameInputActive()) this.handleBlockBreak();
+                if (isGameInputActive()) {
+                    const hitMob = this.handleAttack();
+                    if (!hitMob) this.handleBlockBreak();
+                }
             });
         }
 
@@ -388,6 +464,40 @@ class Game {
     /**
      * Bắn tia Raycast định vị khối người chơi đang nhắm mắt tới
      */
+    /**
+     * Tấn công quái vật bằng tia ngắm bắn Raycast
+     */
+    handleAttack() {
+        const raycaster = new THREE.Raycaster();
+        const center = new THREE.Vector2(0, 0); // Giữa tâm camera
+        raycaster.setFromCamera(center, this.camera);
+        
+        if (!this.mobManager || this.mobManager.mobs.length === 0) return false;
+        
+        // Quét lấy danh sách tất cả mesh của Zombie
+        const zombieMeshes = this.mobManager.mobs.map(z => z.mesh);
+        
+        // Kiểm tra va chạm tia với các mesh quái vật (quét đệ quy)
+        const intersects = raycaster.intersectObjects(zombieMeshes, true);
+        
+        if (intersects.length > 0 && intersects[0].distance < 4.5) {
+            // Tìm ngược lại Group gốc chứa userData.zombieInstance
+            let parent = intersects[0].object.parent;
+            while (parent && !parent.userData.zombieInstance) {
+                parent = parent.parent;
+            }
+            
+            if (parent && parent.userData.zombieInstance) {
+                const zombie = parent.userData.zombieInstance;
+                // Gây sát thương và kiểm tra nếu chết
+                zombie.takeDamage(5, this.player.position);
+                return true; // Đánh trúng quái vật, không đào khối đất phía sau
+            }
+        }
+        
+        return false;
+    }
+
     updateRaycasting() {
         const isGameInputActive = this.player.controls.isLocked || (this.player.isTouchDevice && this.gamePlaying);
         if (!isGameInputActive) {
@@ -609,6 +719,14 @@ class Game {
 
         // 2. Chạy vật lý va chạm và cập nhật vị trí người chơi
         this.physics.update(this.player, dt);
+
+        // 2.5 Cập nhật các trạng thái Sinh tồn (Sát thương rơi, Rơi hư vô, v.v.)
+        this.player.postPhysicsUpdate(dt);
+
+        // 2.8 Cập nhật quái vật Zombie
+        if (this.mobManager && this.gamePlaying) {
+            this.mobManager.update(this.player, dt);
+        }
 
         // 3. Cập nhật vị trí camera theo sát người chơi
         this.player.updateCameraPosition();

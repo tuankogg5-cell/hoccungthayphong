@@ -55,6 +55,13 @@ class Player {
         // Khởi tạo bộ điều khiển PointerLock (chỉ dùng cho PC)
         this.controls = new THREE.PointerLockControls(this.camera, this.canvas);
         
+        // Chế độ chơi & Lượng máu HP (Survival & Creative)
+        this.maxHp = 20; // 10 tim máu
+        this.hp = 20;
+        this.gameMode = 'creative'; // 'creative' hoặc 'survival'
+        this.lastYVelocity = 0;     // Để tính toán sát thương rơi
+        this.invulnerableTimer = 0; // Thời gian bất tử sau khi dính đòn
+
         this.setupInput();
     }
 
@@ -328,6 +335,175 @@ class Player {
             this.msgTimeout = setTimeout(() => {
                 blockNameDiv.classList.remove('show');
             }, 2000);
+        }
+    }
+
+    /**
+     * Cập nhật sau khi di chuyển vật lý xong (Sát thương rơi, Rơi xuống Void, Cập nhật Máu)
+     */
+    postPhysicsUpdate(dt) {
+        // Giảm thời gian bất tử sau dính đòn
+        if (this.invulnerableTimer > 0) {
+            this.invulnerableTimer -= dt;
+        }
+
+        if (this.gameMode === 'survival') {
+            // Rơi xuống hố sâu hư vô (Void) -> Mất máu liên tục và chết
+            if (this.position.y < -15 && this.hp > 0) {
+                this.takeDamage(4, new THREE.Vector3(this.position.x, -25, this.position.z));
+            }
+
+            // TÍNH TOÁN SÁT THƯƠNG RƠI
+            if (!this.flightMode) {
+                // Nếu tiếp đất ở khung hình này
+                if (this.onGround) {
+                    // Nếu vận tốc rơi ở khung hình trước lớn hơn giới hạn an toàn (-15.5 m/s)
+                    if (this.lastYVelocity < -16.5) {
+                        const fallVelocity = Math.abs(this.lastYVelocity);
+                        // Tính sát thương dựa trên vận tốc đập xuống đất
+                        const damage = Math.floor((fallVelocity - 16.5) * 0.7) + 1;
+                        
+                        this.takeDamage(damage, this.position.clone().add(new THREE.Vector3(0, -1, 0)));
+                        this.showSystemMessage(`Ouch! Bạn bị ngã mất ${damage} máu!`);
+                    }
+                }
+            }
+
+            // Đồng bộ vẽ tim máu
+            this.updateHealthHUD();
+        }
+
+        // Lưu vận tốc trục Y để tính sát thương rơi cho khung hình tiếp theo
+        this.lastYVelocity = this.velocity.y;
+    }
+
+    /**
+     * Nhận sát thương và thực hiện lực đẩy lùi (Knockback)
+     */
+    takeDamage(amount, sourcePos) {
+        if (this.gameMode === 'creative' || this.hp <= 0) return;
+        if (this.invulnerableTimer > 0) return; // Đang bất tử tạm thời
+
+        this.hp = Math.max(0, this.hp - amount);
+        this.invulnerableTimer = 0.8; // Bất tử trong 0.8 giây tiếp theo
+
+        // Chớp nhấp nháy màn hình đỏ (Damage Flash)
+        const flashDiv = document.getElementById('damageFlash');
+        if (flashDiv) {
+            flashDiv.style.backgroundColor = 'rgba(255, 0, 0, 0.45)';
+            setTimeout(() => {
+                flashDiv.style.backgroundColor = 'rgba(255, 0, 0, 0)';
+            }, 150);
+        }
+
+        // Lực đẩy lùi (Knockback) hướng ra xa nguồn sát thương
+        if (sourcePos) {
+            const kbDir = new THREE.Vector3().subVectors(this.position, sourcePos);
+            kbDir.y = 0; // Chỉ đẩy lùi trục ngang
+            kbDir.normalize();
+
+            // Đẩy ngang và nẩy dọc nhẹ lên
+            this.velocity.x = kbDir.x * 7.5;
+            this.velocity.z = kbDir.z * 7.5;
+            if (this.onGround) {
+                this.velocity.y = 5.5;
+                this.onGround = false;
+            } else {
+                this.velocity.y = 4.5;
+            }
+        }
+
+        this.updateHealthHUD();
+
+        // Kiểm tra cái chết
+        if (this.hp <= 0) {
+            this.die();
+        }
+    }
+
+    /**
+     * Người chơi bị hạ gục
+     */
+    die() {
+        this.hp = 0;
+        this.velocity.set(0, 0, 0);
+
+        // Hiện màn hình chết You Died
+        const deathScreen = document.getElementById('deathScreen');
+        if (deathScreen) deathScreen.classList.remove('hidden');
+
+        // Ẩn nút pause di động
+        const pauseBtn = document.getElementById('mobilePauseBtn');
+        if (pauseBtn) pauseBtn.classList.remove('show-btn');
+
+        // Thoát khóa chuột trên PC
+        this.controls.unlock();
+    }
+
+    /**
+     * Hồi sinh tại điểm chỉ định
+     */
+    respawn(spawnPoint) {
+        this.hp = this.maxHp;
+        this.position.copy(spawnPoint);
+        this.velocity.set(0, 0, 0);
+        this.lastYVelocity = 0;
+        this.invulnerableTimer = 0;
+
+        // Ẩn màn hình chết
+        const deathScreen = document.getElementById('deathScreen');
+        if (deathScreen) deathScreen.classList.add('hidden');
+
+        this.updateHealthHUD();
+        this.updateCameraPosition();
+    }
+
+    /**
+     * Chuyển đổi chế độ chơi
+     */
+    setGameMode(mode) {
+        this.gameMode = mode;
+        if (mode === 'survival') {
+            this.flightMode = false;
+            this.hp = this.maxHp;
+        } else {
+            this.hp = this.maxHp; // Creative thì coi như đầy máu
+        }
+        this.updateHealthHUD();
+    }
+
+    /**
+     * Cập nhật giao diện 10 quả tim đỏ HUD
+     */
+    updateHealthHUD() {
+        const healthBar = document.getElementById('healthBar');
+        if (!healthBar) return;
+
+        if (this.gameMode !== 'survival') {
+            healthBar.classList.add('hidden');
+            return;
+        }
+
+        healthBar.classList.remove('hidden');
+        healthBar.innerHTML = ''; // Clear cũ
+
+        const fullHearts = Math.floor(this.hp / 2);
+        const hasHalfHeart = (this.hp % 2 === 1);
+
+        for (let i = 0; i < 10; i++) {
+            const heart = document.createElement('span');
+            heart.className = 'heart-icon';
+
+            if (i < fullHearts) {
+                heart.innerHTML = '❤️'; // Quả tim đầy đỏ
+            } else if (i === fullHearts && hasHalfHeart) {
+                heart.innerHTML = '💔'; // Tim vỡ (nửa tim)
+            } else {
+                heart.innerHTML = '🖤'; // Tim đen (mất)
+                heart.className += ' lost';
+            }
+
+            healthBar.appendChild(heart);
         }
     }
 }
