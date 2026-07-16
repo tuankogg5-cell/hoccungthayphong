@@ -29,6 +29,9 @@ class Game {
         this.targetedBlock = null;
         this.blockOutline = null;
         
+        // Trạng thái chơi game trên di động (không dùng PointerLock)
+        this.gamePlaying = false;
+
         // Chu kỳ ngày đêm
         this.dayTime = 0; // Tăng dần từ 0 -> 2*PI
         this.dayNightSpeed = 0.04; // Tốc độ trôi thời gian
@@ -149,16 +152,46 @@ class Game {
             renderDistanceVal.textContent = renderDistanceInput.value;
         });
 
-        // Nút "Chơi ngay" & "Tiếp tục" -> Khóa chuột bắt đầu chơi
+        // Nút "Chơi ngay" & "Tiếp tục" -> Bắt đầu chơi (Bỏ qua khóa chuột nếu là di động)
         const enterGame = () => {
-            this.player.controls.lock();
+            if (this.player.isTouchDevice) {
+                startScreen.classList.add('hidden');
+                pauseScreen.classList.add('hidden');
+                this.gamePlaying = true;
+                
+                const pauseBtn = document.getElementById('mobilePauseBtn');
+                if (pauseBtn) pauseBtn.classList.add('show-btn');
+            } else {
+                this.player.controls.lock();
+            }
         };
+        
+        // Cơ chế tạm dừng trên di động
+        const pauseGameMobile = () => {
+            this.gamePlaying = false;
+            pauseScreen.classList.remove('hidden');
+            const pauseBtn = document.getElementById('mobilePauseBtn');
+            if (pauseBtn) pauseBtn.classList.remove('show-btn');
+        };
+        
+        const mobilePauseBtn = document.getElementById('mobilePauseBtn');
+        if (mobilePauseBtn) {
+            mobilePauseBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                pauseGameMobile();
+            });
+        }
+
         playBtn.addEventListener('click', enterGame);
         resumeBtn.addEventListener('click', enterGame);
 
         // Nút "Thoát ra màn hình chính"
         quitBtn.addEventListener('click', () => {
             this.player.controls.unlock();
+            this.gamePlaying = false;
+            const pauseBtn = document.getElementById('mobilePauseBtn');
+            if (pauseBtn) pauseBtn.classList.remove('show-btn');
             pauseScreen.classList.add('hidden');
             startScreen.classList.remove('hidden');
         });
@@ -269,22 +302,28 @@ class Game {
         const startScreen = document.getElementById('startScreen');
         const pauseScreen = document.getElementById('pauseScreen');
 
-        // Bắt sự kiện PointerLock khi người chơi kích hoạt/thoát
+        // Bắt sự kiện PointerLock khi người chơi kích hoạt/thoát (Chỉ trên PC)
         this.player.controls.addEventListener('lock', () => {
             startScreen.classList.add('hidden');
             pauseScreen.classList.add('hidden');
         });
 
         this.player.controls.addEventListener('unlock', () => {
+            if (this.player.isTouchDevice) return; // Di động xử lý nút bấm riêng
             // Nếu không mở màn hình bắt đầu, thì hiện màn hình tạm dừng
             if (startScreen.classList.contains('hidden')) {
                 pauseScreen.classList.remove('hidden');
             }
         });
 
+        // Hướng kiểm tra trạng thái tương tác game (PC có khóa chuột, di động có cờ chơi game)
+        const isGameInputActive = () => {
+            return this.player.controls.isLocked || (this.player.isTouchDevice && this.gamePlaying);
+        };
+
         // 1. Phím số (1-9) để chọn nhanh ô Hotbar
         window.addEventListener('keydown', (event) => {
-            if (!this.player.controls.isLocked) return;
+            if (!isGameInputActive()) return;
             
             if (event.key >= '1' && event.key <= '9') {
                 const index = parseInt(event.key) - 1;
@@ -294,7 +333,7 @@ class Game {
 
         // 2. Lăn con lăn chuột để chuyển nhanh các ô Hotbar
         window.addEventListener('wheel', (event) => {
-            if (!this.player.controls.isLocked) return;
+            if (!isGameInputActive()) return;
             
             let index = this.selectedSlot;
             if (event.deltaY > 0) {
@@ -309,7 +348,7 @@ class Game {
 
         // 3. Phá/Đặt khối qua click Chuột Trái / Chuột Phải
         window.addEventListener('mousedown', (event) => {
-            if (!this.player.controls.isLocked) return;
+            if (!isGameInputActive()) return;
             
             if (event.button === 0) {
                 // Chuột trái -> Phá khối
@@ -319,6 +358,24 @@ class Game {
                 this.handleBlockPlace();
             }
         });
+
+        // 4. Sự kiện chạm nút hành động cảm ứng di động (Đập 🔨 & Đặt 🧱)
+        const mobileBreakBtn = document.getElementById('mobileBreakBtn');
+        const mobilePlaceBtn = document.getElementById('mobilePlaceBtn');
+
+        if (mobileBreakBtn) {
+            mobileBreakBtn.addEventListener('touchstart', (event) => {
+                event.preventDefault();
+                if (isGameInputActive()) this.handleBlockBreak();
+            });
+        }
+
+        if (mobilePlaceBtn) {
+            mobilePlaceBtn.addEventListener('touchstart', (event) => {
+                event.preventDefault();
+                if (isGameInputActive()) this.handleBlockPlace();
+            });
+        }
 
         // Co giãn màn hình trình duyệt (Responsive)
         window.addEventListener('resize', () => {
@@ -332,7 +389,8 @@ class Game {
      * Bắn tia Raycast định vị khối người chơi đang nhắm mắt tới
      */
     updateRaycasting() {
-        if (!this.player.controls.isLocked) {
+        const isGameInputActive = this.player.controls.isLocked || (this.player.isTouchDevice && this.gamePlaying);
+        if (!isGameInputActive) {
             this.blockOutline.visible = false;
             this.targetedBlock = null;
             return;
@@ -562,7 +620,8 @@ class Game {
         this.updateDayNightCycle(dt);
 
         // 6. Cập nhật sinh các mảnh chunk mới quanh người chơi
-        if (this.player.controls.isLocked) {
+        const isGameInputActive = this.player.controls.isLocked || (this.player.isTouchDevice && this.gamePlaying);
+        if (isGameInputActive) {
             this.world.updateChunks(this.player.position.x, this.player.position.z);
         }
 

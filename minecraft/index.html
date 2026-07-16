@@ -18,6 +18,9 @@
     <!-- Crosshair (Tâm ngắm) -->
     <div id="crosshair">+</div>
 
+    <!-- Nút tạm dừng trên di động -->
+    <button id="mobilePauseBtn" class="hidden">⏸</button>
+
     <!-- HUD: Hotbar (Thanh phím tắt chọn khối) -->
     <div id="hud">
         <div id="hotbar">
@@ -135,6 +138,22 @@
                 </div>
                 <button id="saveSettingsBtn" class="btn btn-primary" style="margin-top: 20px;">LƯU CÀI ĐẶT</button>
             </div>
+        </div>
+    </div>
+    <!-- Tay cầm cảm ứng dành cho Thiết bị di động -->
+    <div id="mobileControls" class="hidden">
+        <!-- Vùng Joystick ảo điều khiển di chuyển ở góc dưới bên trái -->
+        <div id="joystickZone">
+            <div id="joystickContainer">
+                <div id="joystickHandle"></div>
+            </div>
+        </div>
+        
+        <!-- Các nút bấm hành động ở góc dưới bên phải -->
+        <div id="mobileActionButtons">
+            <button id="mobileBreakBtn" class="mobile-action-btn">🔨</button>
+            <button id="mobilePlaceBtn" class="mobile-action-btn">🧱</button>
+            <button id="mobileJumpBtn" class="mobile-action-btn">▲</button>
         </div>
     </div>
 

@@ -417,3 +417,205 @@ body, html {
 .modal-content::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.4);
 }
+
+/* Tay cầm di động (Mobile Controls UI) */
+#mobileControls {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 50;
+}
+
+#mobileControls.hidden {
+    display: none;
+}
+
+/* Joystick ảo điều khiển di chuyển */
+#joystickZone {
+    position: absolute;
+    bottom: 30px;
+    left: 45px;
+    width: 130px;
+    height: 130px;
+    pointer-events: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#joystickContainer {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: rgba(20, 20, 20, 0.5);
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8), 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+#joystickHandle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.7);
+    border: 2px solid #ffffff;
+    position: absolute;
+    top: calc(50% - 24px);
+    left: calc(50% - 24px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    transition: transform 0.05s ease;
+}
+
+/* Nút hành động cảm ứng (Đào, Đặt, Nhảy) */
+#mobileActionButtons {
+    position: absolute;
+    bottom: 30px;
+    right: 45px;
+    display: grid;
+    grid-template-columns: repeat(2, 60px);
+    grid-template-rows: repeat(2, 60px);
+    gap: 16px;
+    pointer-events: auto;
+}
+
+.mobile-action-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(20, 20, 20, 0.5);
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    font-size: 22px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    transform: translateY(0);
+    transition: background-color 0.1s, transform 0.05s;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-action-btn:active {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(0.92) translateY(2px);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Sắp xếp vị trí nút di động */
+#mobileBreakBtn {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+#mobilePlaceBtn {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+#mobileJumpBtn {
+    grid-column: 2;
+    grid-row: 2;
+    background: rgba(82, 160, 56, 0.5); /* Thêm tí viền xanh sương cho nút nhảy */
+    border-color: rgba(82, 160, 56, 0.4);
+}
+
+#mobileJumpBtn:active {
+    background: rgba(82, 160, 56, 0.8);
+}
+
+/* Tối ưu hóa hiển thị trên di động (Responsive UI) */
+@media (max-width: 768px) {
+    /* Đẩy Hotbar lên cao để không bị chồng lấn vào Joystick và Nút bấm hành động */
+    #hud {
+        bottom: 15px;
+        transform: translateX(-50%) scale(0.85); /* Nhỏ lại tí trên màn hình nhỏ */
+    }
+
+    #block-name {
+        font-size: 8px;
+    }
+
+    /* Giảm cỡ chữ màn hình chờ */
+    .menu-container {
+        padding: 24px 30px;
+        max-width: 360px;
+    }
+
+    .game-logo {
+        font-size: 20px;
+        text-shadow: 2px 2px 0px #386725;
+    }
+
+    .game-subtitle {
+        font-size: 8px;
+        margin-bottom: 20px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        font-size: 9px;
+    }
+
+    /* Giảm cỡ các modal cài đặt */
+    .modal-content {
+        padding: 20px 24px;
+        width: 95%;
+    }
+
+    .modal-content h2 {
+        font-size: 12px;
+        margin-bottom: 16px;
+    }
+
+    .control-item {
+        font-size: 11px;
+    }
+}
+
+/* Đảm bảo canvas game luôn đè sát ở dưới */
+#gameCanvas {
+    outline: none;
+}
+
+/* Nút tạm dừng trên di động */
+#mobilePauseBtn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: rgba(20, 20, 20, 0.5);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    font-size: 16px;
+    display: none; /* Ẩn mặc định trên PC */
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 60;
+    pointer-events: auto;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.1s, transform 0.05s;
+}
+
+#mobilePauseBtn:active {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(0.92);
+}
+
+@media (max-width: 768px) {
+    #mobilePauseBtn.show-btn {
+        display: flex; /* Chỉ hiện trên thiết bị nhỏ khi game đang chơi */
+    }
+}
+
+
