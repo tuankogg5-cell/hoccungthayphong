@@ -150,9 +150,11 @@
             
             <div class="menu-buttons">
                 <button id="playBtn" class="btn btn-primary">CHƠI NGAY</button>
+                <button id="bodyTrackBtn" class="btn btn-body">🕺 BODY TRACKING</button>
                 <button id="controlsBtn" class="btn btn-secondary">HƯỚNG DẪN</button>
                 <button id="settingsBtn" class="btn btn-secondary">CÀI ĐẶT</button>
             </div>
+
             
             <div class="footer-credit">Được xây dựng bằng Three.js &bull; Antigravity AI</div>
         </div>
@@ -165,11 +167,13 @@
             
             <div class="menu-buttons">
                 <button id="resumeBtn" class="btn btn-primary">TIẾP TỤC CHƠI</button>
+                <button id="pauseBodyTrackBtn" class="btn btn-body">🕺 BODY TRACKING</button>
                 <button id="pauseSettingsBtn" class="btn btn-secondary">CÀI ĐẶT</button>
                 <button id="quitBtn" class="btn btn-danger">MÀN HÌNH CHÍNH</button>
             </div>
         </div>
     </div>
+
 
     <!-- Bảng Hướng dẫn điều khiển (Controls Panel) -->
     <div id="controlsModal" class="modal hidden">
@@ -297,6 +301,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
 
+    <!-- MediaPipe Pose (Body Tracking AI) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
+
     <!-- Nạp mã nguồn chia nhỏ của trò chơi -->
     <script src="js/noise.js?v=2.1"></script>
     <script src="js/textures.js?v=2.1"></script>
@@ -305,6 +315,45 @@
     <script src="js/player.js?v=2.1"></script>
     <script src="js/mobs.js?v=2.1"></script>
     <script src="js/drops.js?v=2.1"></script>
+    <script src="js/bodytracking.js?v=1.0"></script>
     <script src="js/game.js?v=2.1"></script>
+
+    <!-- Khởi động nút Body Tracking -->
+    <script>
+        function startBodyTracking() {
+            if (!window.gameInstance) { 
+                alert('Game chưa tải xong, thử lại sau vài giây!'); 
+                return; 
+            }
+            // Tắt instance cũ nếu có
+            if (window.bodyTrackerInstance) {
+                window.bodyTrackerInstance.destroy();
+            }
+            window.bodyTrackerInstance = new BodyTracker(window.gameInstance);
+            window.bodyTrackerInstance.init();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            // Nút ở màn hình chính
+            const bodyTrackBtn = document.getElementById('bodyTrackBtn');
+            if (bodyTrackBtn) {
+                bodyTrackBtn.addEventListener('click', startBodyTracking);
+                bodyTrackBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    startBodyTracking();
+                }, { passive: false });
+            }
+            // Nút ở menu tạm dừng
+            const pauseBodyTrackBtn = document.getElementById('pauseBodyTrackBtn');
+            if (pauseBodyTrackBtn) {
+                pauseBodyTrackBtn.addEventListener('click', startBodyTracking);
+                pauseBodyTrackBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    startBodyTracking();
+                }, { passive: false });
+            }
+        });
+    </script>
 </body>
 </html>
+

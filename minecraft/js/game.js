@@ -39,6 +39,9 @@ class Game {
         // Trạng thái chơi game trên di động (không dùng PointerLock)
         this.gamePlaying = false;
 
+        // Trạng thái chơi game bằng Body Tracking (không cần PointerLock hoặc di động)
+        this.bodyTrackingMode = false;
+
         // Chu kỳ ngày đêm
         this.dayTime = 0; // Tăng dần từ 0 -> 2*PI
         this.dayNightSpeed = 0.04; // Tốc độ trôi thời gian
@@ -872,7 +875,9 @@ class Game {
 
         // Hướng kiểm tra trạng thái tương tác game (PC có khóa chuột, di động có cờ chơi game)
         const isGameInputActive = () => {
-            return this.player.controls.isLocked || (this.player.isTouchDevice && this.gamePlaying);
+            return this.player.controls.isLocked ||
+                   (this.player.isTouchDevice && this.gamePlaying) ||
+                   this.bodyTrackingMode;
         };
 
         // 1. Phím số (1-9) để chọn nhanh ô Hotbar
@@ -1057,7 +1062,9 @@ class Game {
     }
 
     updateRaycasting() {
-        const isGameInputActive = this.player.controls.isLocked || (this.player.isTouchDevice && this.gamePlaying);
+        const isGameInputActive = this.player.controls.isLocked ||
+                                  (this.player.isTouchDevice && this.gamePlaying) ||
+                                  this.bodyTrackingMode;
         if (!isGameInputActive) {
             this.blockOutline.visible = false;
             this.targetedBlock = null;
@@ -1436,6 +1443,11 @@ class Game {
 
         const dt = this.clock.getDelta();
 
+        // 0. Áp dụng body tracking controls (nếu đang bật)
+        if (this.bodyTrackingMode && window.bodyTrackerInstance) {
+            window.bodyTrackerInstance.applyToGame();
+        }
+
         // 1. Cập nhật phím di chuyển
         this.player.updateInput();
 
@@ -1446,7 +1458,9 @@ class Game {
         this.player.postPhysicsUpdate(dt);
 
         // 2.8 Cập nhật quái vật Zombie
-        const isGameInputActive = this.player.controls.isLocked || (this.player.isTouchDevice && this.gamePlaying);
+        const isGameInputActive = this.player.controls.isLocked ||
+                                   (this.player.isTouchDevice && this.gamePlaying) ||
+                                   this.bodyTrackingMode;
         if (this.mobManager && isGameInputActive) {
             this.mobManager.update(this.player, dt);
         }

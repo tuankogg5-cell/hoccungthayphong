@@ -318,8 +318,9 @@ class Player {
      * Cập nhật lực và vận tốc di chuyển trước khi nạp vào hệ thống vật lý va chạm
      */
     updateInput() {
-        // Chỉ cập nhật khi khóa chuột (PC) HOẶC khi đang chơi trên thiết bị di động
-        if (!this.controls.isLocked && !this.isTouchDevice) return;
+        // Chỉ cập nhật khi khóa chuột (PC) HOẶC khi đang chơi trên thiết bị di động HOẶC body tracking
+        const bodyTracking = window.gameInstance && window.gameInstance.bodyTrackingMode;
+        if (!this.controls.isLocked && !this.isTouchDevice && !bodyTracking) return;
 
         // Lấy hướng nhìn ngang của camera (chiếu lên mặt phẳng XZ để đi bộ không bị bay lên trời)
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
