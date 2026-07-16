@@ -153,6 +153,25 @@ class Game {
         const controlsModal = document.getElementById('controlsModal');
         const settingsModal = document.getElementById('settingsModal');
         
+        // Helper đa điểm chạm/click đồng thời cho nút bấm phản hồi tức thì
+        const addBtnListener = (element, callback) => {
+            if (!element) return;
+            let triggered = false;
+            
+            element.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                triggered = true;
+                callback(e);
+                setTimeout(() => { triggered = false; }, 300);
+            }, { passive: false });
+            
+            element.addEventListener('click', (e) => {
+                if (triggered) return;
+                callback(e);
+            });
+        };
+        
         const playBtn = document.getElementById('playBtn');
         const resumeBtn = document.getElementById('resumeBtn');
         const quitBtn = document.getElementById('quitBtn');
@@ -178,29 +197,37 @@ class Game {
 
         // Hỗ trợ Toàn màn hình (Fullscreen) cho di động để ẩn thanh địa chỉ/tab tìm kiếm
         const enterFullScreen = () => {
-            const docElm = document.documentElement;
-            if (docElm.requestFullscreen) {
-                docElm.requestFullscreen().catch(() => {});
-            } else if (docElm.webkitRequestFullscreen) {
-                docElm.webkitRequestFullscreen();
-            } else if (docElm.mozRequestFullScreen) {
-                docElm.mozRequestFullScreen();
-            } else if (docElm.msRequestFullscreen) {
-                docElm.msRequestFullscreen();
+            try {
+                const docElm = document.documentElement;
+                if (docElm.requestFullscreen) {
+                    docElm.requestFullscreen().catch(() => {});
+                } else if (docElm.webkitRequestFullscreen) {
+                    docElm.webkitRequestFullscreen();
+                } else if (docElm.mozRequestFullScreen) {
+                    docElm.mozRequestFullScreen();
+                } else if (docElm.msRequestFullscreen) {
+                    docElm.msRequestFullscreen();
+                }
+            } catch (e) {
+                console.warn("Chế độ toàn màn hình không hỗ trợ:", e);
             }
         };
 
         const exitFullScreen = () => {
-            if (document.fullscreenElement || document.webkitFullscreenElement) {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen().catch(() => {});
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                } else if (document.mozCancelFullScreen) {
-                    document.mozCancelFullScreen();
-                } else if (document.msExitFullscreen) {
-                    document.msExitFullscreen();
+            try {
+                if (document.fullscreenElement || document.webkitFullscreenElement) {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen().catch(() => {});
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    } else if (document.mozCancelFullScreen) {
+                        document.mozCancelFullScreen();
+                    } else if (document.msExitFullscreen) {
+                        document.msExitFullscreen();
+                    }
                 }
+            } catch (e) {
+                console.warn("Thoát toàn màn hình thất bại:", e);
             }
         };
 
@@ -217,7 +244,11 @@ class Game {
                 const pauseBtn = document.getElementById('mobilePauseBtn');
                 if (pauseBtn) pauseBtn.classList.add('show-btn');
             } else {
-                this.player.controls.lock();
+                try {
+                    this.player.controls.lock();
+                } catch (e) {
+                    console.warn(e);
+                }
             }
         };
         
@@ -230,20 +261,16 @@ class Game {
         };
         
         const mobilePauseBtn = document.getElementById('mobilePauseBtn');
-        if (mobilePauseBtn) {
-            mobilePauseBtn.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                pauseGameMobile();
-            });
-        }
+        addBtnListener(mobilePauseBtn, (event) => {
+            pauseGameMobile();
+        });
 
         // 1. Chuyển đổi Sáng tạo / Sinh tồn
         const creativeModeBtn = document.getElementById('creativeModeBtn');
         const survivalModeBtn = document.getElementById('survivalModeBtn');
 
         if (creativeModeBtn && survivalModeBtn) {
-            creativeModeBtn.addEventListener('click', () => {
+            addBtnListener(creativeModeBtn, () => {
                 creativeModeBtn.classList.add('active');
                 survivalModeBtn.classList.remove('active');
                 this.player.setGameMode('creative');
@@ -253,7 +280,7 @@ class Game {
                 this.player.showSystemMessage("Đã chuyển sang Sáng tạo");
             });
 
-            survivalModeBtn.addEventListener('click', () => {
+            addBtnListener(survivalModeBtn, () => {
                 survivalModeBtn.classList.add('active');
                 creativeModeBtn.classList.remove('active');
                 this.player.setGameMode('survival');
@@ -275,7 +302,7 @@ class Game {
         const deathQuitBtn = document.getElementById('deathQuitBtn');
 
         if (respawnBtn) {
-            respawnBtn.addEventListener('click', () => {
+            addBtnListener(respawnBtn, () => {
                 this.player.respawn(this.spawnPoint);
                 if (this.mobManager) this.mobManager.clearAll();
                 this.itemDrops.forEach(d => this.scene.remove(d.mesh));
@@ -285,7 +312,7 @@ class Game {
         }
 
         if (deathQuitBtn) {
-            deathQuitBtn.addEventListener('click', () => {
+            addBtnListener(deathQuitBtn, () => {
                 const deathScreen = document.getElementById('deathScreen');
                 if (deathScreen) deathScreen.classList.add('hidden');
                 
@@ -302,12 +329,18 @@ class Game {
             });
         }
 
-        playBtn.addEventListener('click', enterGame);
-        resumeBtn.addEventListener('click', enterGame);
+        addBtnListener(playBtn, enterGame);
+        addBtnListener(resumeBtn, enterGame);
 
         // Nút "Thoát ra màn hình chính"
-        quitBtn.addEventListener('click', () => {
-            this.player.controls.unlock();
+        addBtnListener(quitBtn, () => {
+            if (document.pointerLockElement) {
+                try {
+                    this.player.controls.unlock();
+                } catch (e) {
+                    console.warn(e);
+                }
+            }
             this.gamePlaying = false;
             const pauseBtn = document.getElementById('mobilePauseBtn');
             if (pauseBtn) pauseBtn.classList.remove('show-btn');
@@ -331,7 +364,7 @@ class Game {
         const craftingTabContent = document.getElementById('craftingTabContent');
 
         if (tabBackpack && tabCrafting) {
-            tabBackpack.addEventListener('click', () => {
+            addBtnListener(tabBackpack, () => {
                 tabBackpack.classList.add('active');
                 tabCrafting.classList.remove('active');
                 backpackTabContent.classList.remove('hidden');
@@ -343,7 +376,7 @@ class Game {
                 tabCrafting.style.color = '#ccc';
             });
 
-            tabCrafting.addEventListener('click', () => {
+            addBtnListener(tabCrafting, () => {
                 tabCrafting.classList.add('active');
                 tabBackpack.classList.remove('active');
                 craftingTabContent.classList.remove('hidden');
@@ -357,16 +390,16 @@ class Game {
         }
 
         if (closeInventory) {
-            closeInventory.addEventListener('click', () => {
+            addBtnListener(closeInventory, () => {
                 this.closeInventoryModal();
             });
         }
 
         // Bảng hướng dẫn
-        controlsBtn.addEventListener('click', () => {
+        addBtnListener(controlsBtn, () => {
             controlsModal.classList.remove('hidden');
         });
-        closeControls.addEventListener('click', () => {
+        addBtnListener(closeControls, () => {
             controlsModal.classList.add('hidden');
         });
 
@@ -380,15 +413,15 @@ class Game {
             
             settingsModal.classList.remove('hidden');
         };
-        settingsBtn.addEventListener('click', openSettings);
-        pauseSettingsBtn.addEventListener('click', openSettings);
+        addBtnListener(settingsBtn, openSettings);
+        addBtnListener(pauseSettingsBtn, openSettings);
         
-        closeSettings.addEventListener('click', () => {
+        addBtnListener(closeSettings, () => {
             settingsModal.classList.add('hidden');
         });
 
         // Lưu cài đặt
-        saveSettingsBtn.addEventListener('click', () => {
+        addBtnListener(saveSettingsBtn, () => {
             const rd = parseInt(renderDistanceInput.value);
             this.world.renderDistance = rd;
             this.player.flightMode = flightModeInput.checked;
@@ -501,7 +534,13 @@ class Game {
      */
     openInventoryModal() {
         // Hủy trạng thái PointerLock của trình duyệt để có thể di chuột click
-        this.player.controls.unlock();
+        if (document.pointerLockElement) {
+            try {
+                this.player.controls.unlock();
+            } catch (e) {
+                console.warn(e);
+            }
+        }
         this.gamePlaying = false;
         
         // Nhả giữ phím đào tránh bị kẹt đào
@@ -769,7 +808,11 @@ class Game {
             if (pauseBtn) pauseBtn.classList.add('show-btn');
         } else {
             // Tự động PointerLock lại trên máy tính
-            this.player.controls.lock();
+            try {
+                this.player.controls.lock();
+            } catch (e) {
+                console.warn(e);
+            }
         }
     }
 

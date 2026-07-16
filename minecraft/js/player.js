@@ -494,7 +494,13 @@ class Player {
         if (pauseBtn) pauseBtn.classList.remove('show-btn');
 
         // Thoát khóa chuột trên PC
-        this.controls.unlock();
+        if (document.pointerLockElement) {
+            try {
+                this.controls.unlock();
+            } catch (e) {
+                console.warn(e);
+            }
+        }
     }
 
     /**
