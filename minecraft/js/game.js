@@ -649,6 +649,30 @@ class Game {
                     name: 'Cúp Đá (Công cụ)',
                     requires: { 'stick': 2, 9: 3 }, // 2 Gậy, 3 Đá Cuội
                     gives: { 'stone_pickaxe': 1 }
+                },
+                {
+                    id: 'iron_sword',
+                    name: 'Kiếm Sắt (Vũ khí)',
+                    requires: { 'stick': 1, 12: 2 }, // 1 Gậy, 2 Quặng Sắt
+                    gives: { 'iron_sword': 1 }
+                },
+                {
+                    id: 'iron_pickaxe',
+                    name: 'Cúp Sắt (Công cụ)',
+                    requires: { 'stick': 2, 12: 3 }, // 2 Gậy, 3 Quặng Sắt
+                    gives: { 'iron_pickaxe': 1 }
+                },
+                {
+                    id: 'diamond_sword',
+                    name: 'Kiếm Kim Cương (Vũ khí)',
+                    requires: { 'stick': 1, 14: 2 }, // 1 Gậy, 2 Quặng Kim Cương
+                    gives: { 'diamond_sword': 1 }
+                },
+                {
+                    id: 'diamond_pickaxe',
+                    name: 'Cúp Kim Cương (Công cụ)',
+                    requires: { 'stick': 2, 14: 3 }, // 2 Gậy, 3 Quặng Kim Cương
+                    gives: { 'diamond_pickaxe': 1 }
                 }
             ];
 
@@ -780,6 +804,14 @@ class Game {
                                     this.hotbarBlocks[7] = 'stone_sword'; // Ô số 8
                                 } else if (recipe.id === 'stone_pickaxe') {
                                     this.hotbarBlocks[8] = 'stone_pickaxe'; // Ô số 9
+                                } else if (recipe.id === 'iron_sword') {
+                                    this.hotbarBlocks[7] = 'iron_sword'; // Ô số 8
+                                } else if (recipe.id === 'iron_pickaxe') {
+                                    this.hotbarBlocks[8] = 'iron_pickaxe'; // Ô số 9
+                                } else if (recipe.id === 'diamond_sword') {
+                                    this.hotbarBlocks[7] = 'diamond_sword'; // Ô số 8
+                                } else if (recipe.id === 'diamond_pickaxe') {
+                                    this.hotbarBlocks[8] = 'diamond_pickaxe'; // Ô số 9
                                 }
                                 this.updateHotbarHUD();
                                 this.openInventoryModal(); // Vẽ lại giao diện
@@ -1006,8 +1038,17 @@ class Game {
             
             if (parent && parent.userData.zombieInstance) {
                 const zombie = parent.userData.zombieInstance;
-                // Gây sát thương và kiểm tra nếu chết
-                zombie.takeDamage(5, this.player.position);
+                // Tính toán sát thương động dựa trên vật phẩm cầm tay
+                let attackDamage = 1; // Đấm tay không
+                const heldItem = this.hotbarBlocks[this.selectedSlot];
+                if (heldItem === 'stone_sword') attackDamage = 5;      // Kiếm đá
+                else if (heldItem === 'iron_sword') attackDamage = 8;  // Kiếm sắt
+                else if (heldItem === 'diamond_sword') attackDamage = 12; // Kiếm kim cương
+                else if (heldItem === 'stone_pickaxe') attackDamage = 3;  // Cúp đá
+                else if (heldItem === 'iron_pickaxe') attackDamage = 5;   // Cúp sắt
+                else if (heldItem === 'diamond_pickaxe') attackDamage = 7; // Cúp kim cương
+                
+                zombie.takeDamage(attackDamage, this.player.position);
                 return true; // Đánh trúng quái vật, không đào khối đất phía sau
             }
         }
@@ -1122,7 +1163,13 @@ class Game {
             // Sinh tồn: Tạo vật phẩm 3D rơi tự do
             if (this.player.gameMode === 'survival' && brokenBlockId > 0) {
                 const dropPos = new THREE.Vector3(x, y, z);
-                const drop = new ItemDrop(this.scene, this.world, brokenBlockId, dropPos);
+                
+                // Quy đổi khối bị đập ra vật phẩm rơi (Cỏ -> Đất, Đá -> Đá cuội)
+                let dropBlockId = brokenBlockId;
+                if (brokenBlockId === 1) dropBlockId = 2; // Cỏ -> Đất
+                if (brokenBlockId === 3) dropBlockId = 9; // Đá -> Đá cuội
+                
+                const drop = new ItemDrop(this.scene, this.world, dropBlockId, dropPos);
                 this.itemDrops.push(drop);
             }
         }
@@ -1138,7 +1185,10 @@ class Game {
             const blockToPlace = this.hotbarBlocks[this.selectedSlot];
 
             // 1. Nếu là vũ khí hoặc công cụ thì tuyệt đối KHÔNG cho đặt xuống thế giới
-            if (blockToPlace === 'stone_sword' || blockToPlace === 'stone_pickaxe') {
+            const isToolOrWeapon = typeof blockToPlace === 'string' && (
+                blockToPlace.endsWith('_sword') || blockToPlace.endsWith('_pickaxe')
+            );
+            if (isToolOrWeapon) {
                 return;
             }
 
@@ -1269,12 +1319,17 @@ class Game {
      * Lấy độ cứng (thời gian đào - giây) của từng loại khối voxel
      */
     getBlockHardness(blockId) {
-        // Kiểm tra xem người chơi có đang cầm Cúp Đá (stone_pickaxe) không
+        // Kiểm tra xem người chơi đang cầm loại cúp nào
         const activeItem = this.hotbarBlocks[this.selectedSlot];
-        const hasPickaxe = (activeItem === 'stone_pickaxe');
         
-        // Cúp đá giúp tăng tốc độ khai thác đá và quặng gấp 4 lần (giảm 75% thời gian đào)
-        const speedMultiplier = hasPickaxe ? 4.0 : 1.0;
+        let speedMultiplier = 1.0;
+        if (activeItem === 'stone_pickaxe') {
+            speedMultiplier = 4.0; // Cúp đá tăng tốc đào đá/quặng x4
+        } else if (activeItem === 'iron_pickaxe') {
+            speedMultiplier = 8.0; // Cúp sắt tăng tốc đào x8
+        } else if (activeItem === 'diamond_pickaxe') {
+            speedMultiplier = 15.0; // Cúp kim cương tăng tốc đào x15!
+        }
 
         switch (blockId) {
             case 5:  // Khối Lá sồi

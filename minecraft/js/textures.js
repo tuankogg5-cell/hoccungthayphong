@@ -75,7 +75,11 @@ const TextureGenerator = {
         17: 'Đá Phát Sáng',
         18: 'Đá Hắc Diệu Thạch',
         'stone_sword': 'Kiếm Đá',
-        'stone_pickaxe': 'Cúp Đá'
+        'stone_pickaxe': 'Cúp Đá',
+        'iron_sword': 'Kiếm Sắt',
+        'iron_pickaxe': 'Cúp Sắt',
+        'diamond_sword': 'Kiếm Kim Cương',
+        'diamond_pickaxe': 'Cúp Kim Cương'
     },
 
     /**
@@ -407,12 +411,14 @@ const TextureGenerator = {
         ctx.clearRect(0, 0, w, h);
 
         // A. Nếu là Vũ khí/Công cụ chế tạo
-        if (blockId === 'stone_sword') {
-            this.drawSwordIcon(ctx, w, h);
+        if (typeof blockId === 'string' && blockId.endsWith('_sword')) {
+            const mat = blockId.split('_')[0];
+            this.drawSwordIcon(ctx, w, h, mat);
             return;
         }
-        if (blockId === 'stone_pickaxe') {
-            this.drawPickaxeIcon(ctx, w, h);
+        if (typeof blockId === 'string' && blockId.endsWith('_pickaxe')) {
+            const mat = blockId.split('_')[0];
+            this.drawPickaxeIcon(ctx, w, h, mat);
             return;
         }
         if (blockId === 'stick') {
@@ -526,7 +532,7 @@ const TextureGenerator = {
     /**
      * Vẽ Kiếm Đá dạng Pixel Art
      */
-    drawSwordIcon(ctx, w, h) {
+    drawSwordIcon(ctx, w, h, material = 'stone') {
         ctx.save();
         ctx.scale(w / 32, h / 32);
         
@@ -540,8 +546,19 @@ const TextureGenerator = {
         const guard = [[5,21], [6,22], [8,20], [9,19], [10,20]];
         guard.forEach(pt => ctx.fillRect(pt[0], pt[1], 2, 2));
         
-        // Lưỡi kiếm đá: (10,18) -> (24,4)
-        ctx.fillStyle = '#a4b0be'; // Đá sáng
+        // Màu lưỡi kiếm dựa trên nguyên liệu
+        let bladeColor = '#a4b0be';
+        let edgeColor = '#747d8c';
+        
+        if (material === 'iron') {
+            bladeColor = '#ffffff';
+            edgeColor = '#ced6e0';
+        } else if (material === 'diamond') {
+            bladeColor = '#30cfd0';
+            edgeColor = '#2575fc';
+        }
+        
+        ctx.fillStyle = bladeColor;
         const blade = [
             [10,18], [11,17], [12,16], [13,15], [14,14], [15,13], 
             [16,12], [17,11], [18,10], [19,9], [20,8], [21,7],
@@ -550,7 +567,7 @@ const TextureGenerator = {
         blade.forEach(pt => ctx.fillRect(pt[0], pt[1], 2, 2));
 
         // Sống kiếm sẫm màu
-        ctx.fillStyle = '#747d8c';
+        ctx.fillStyle = edgeColor;
         const bladeEdge = [
             [11,18], [12,17], [13,16], [14,15], [15,14], [16,13],
             [17,12], [18,11], [19,10], [20,9], [21,8], [22,7],
@@ -564,7 +581,7 @@ const TextureGenerator = {
     /**
      * Vẽ Cúp Đá dạng Pixel Art
      */
-    drawPickaxeIcon(ctx, w, h) {
+    drawPickaxeIcon(ctx, w, h, material = 'stone') {
         ctx.save();
         ctx.scale(w / 32, h / 32);
         
@@ -577,8 +594,19 @@ const TextureGenerator = {
         ];
         shaft.forEach(pt => ctx.fillRect(pt[0], pt[1], 2, 2));
         
-        // Lưỡi đá cuốc chim
-        ctx.fillStyle = '#4b535d'; // Đá sẫm
+        // Màu lưỡi cuốc chim
+        let headColor = '#4b535d';
+        let highlightColor = '#a4b0be';
+        
+        if (material === 'iron') {
+            headColor = '#ced6e0';
+            highlightColor = '#ffffff';
+        } else if (material === 'diamond') {
+            headColor = '#2575fc';
+            highlightColor = '#30cfd0';
+        }
+        
+        ctx.fillStyle = headColor;
         const head = [
             [17,9], [18,8], [19,7], [20,6], [21,5], [22,5], [23,5], [24,6], [25,7],
             [21,9], [22,10], [23,11], [24,12]
@@ -586,7 +614,7 @@ const TextureGenerator = {
         head.forEach(pt => ctx.fillRect(pt[0], pt[1], 2, 2));
 
         // Điểm nhấn đá sáng
-        ctx.fillStyle = '#a4b0be';
+        ctx.fillStyle = highlightColor;
         const headLight = [
             [19,8], [20,7], [21,6], [22,6], [23,6], [24,7],
             [22,9], [23,10]

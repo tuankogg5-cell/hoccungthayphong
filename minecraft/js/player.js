@@ -534,6 +534,10 @@ class Player {
         this.inventory['stick'] = 0;
         this.inventory['stone_sword'] = 0;
         this.inventory['stone_pickaxe'] = 0;
+        this.inventory['iron_sword'] = 0;
+        this.inventory['iron_pickaxe'] = 0;
+        this.inventory['diamond_sword'] = 0;
+        this.inventory['diamond_pickaxe'] = 0;
     }
 
     /**
