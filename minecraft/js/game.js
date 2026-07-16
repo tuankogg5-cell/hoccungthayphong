@@ -21,14 +21,21 @@ class Game {
         this.clock = new THREE.Clock();
         
         // Chọn khối hiện tại (Hotbar)
-        // Cú pháp: slotIndex (0-8) -> blockId (1-10)
+        // Cú pháp: slotIndex (0-8) -> blockId (1-18) hoặc dụng cụ
         this.selectedSlot = 0;
-        this.hotbarBlocks = [1, 2, 3, 4, 5, 6, 7, 8, 9]; // 9 loại khối ứng với phím 1-9
+        this.hotbarBlocks = [1, 2, 3, 4, 10, 9, 7, 'stone_sword', 'stone_pickaxe']; // Cho phép chứa kiếm và cúp mặc định
         
         // Trạng thái Raycasting ngắm bắn khối
         this.targetedBlock = null;
         this.blockOutline = null;
         
+        // Trạng thái đào khối theo độ cứng
+        this.miningBlockCoords = null; // {x, y, z}
+        this.miningProgress = 0;
+        this.miningTimeNeeded = 0;
+        this.isMiningPressed = false;
+        this.mobileMiningActive = false;
+
         // Trạng thái chơi game trên di động (không dùng PointerLock)
         this.gamePlaying = false;
 
@@ -266,6 +273,46 @@ class Game {
             startScreen.classList.remove('hidden');
         });
 
+        // 3. Quản lý Modal Kho Đồ & Chế tạo
+        const inventoryModal = document.getElementById('inventoryModal');
+        const closeInventory = document.getElementById('closeInventory');
+        const tabBackpack = document.getElementById('tabBackpack');
+        const tabCrafting = document.getElementById('tabCrafting');
+        const backpackTabContent = document.getElementById('backpackTabContent');
+        const craftingTabContent = document.getElementById('craftingTabContent');
+
+        if (tabBackpack && tabCrafting) {
+            tabBackpack.addEventListener('click', () => {
+                tabBackpack.classList.add('active');
+                tabCrafting.classList.remove('active');
+                backpackTabContent.classList.remove('hidden');
+                craftingTabContent.classList.add('hidden');
+                
+                tabBackpack.style.background = 'var(--primary)';
+                tabBackpack.style.color = '#fff';
+                tabCrafting.style.background = 'rgba(255,255,255,0.1)';
+                tabCrafting.style.color = '#ccc';
+            });
+
+            tabCrafting.addEventListener('click', () => {
+                tabCrafting.classList.add('active');
+                tabBackpack.classList.remove('active');
+                craftingTabContent.classList.remove('hidden');
+                backpackTabContent.classList.add('hidden');
+                
+                tabCrafting.style.background = 'var(--primary)';
+                tabCrafting.style.color = '#fff';
+                tabBackpack.style.background = 'rgba(255,255,255,0.1)';
+                tabBackpack.style.color = '#ccc';
+            });
+        }
+
+        if (closeInventory) {
+            closeInventory.addEventListener('click', () => {
+                this.closeInventoryModal();
+            });
+        }
+
         // Bảng hướng dẫn
         controlsBtn.addEventListener('click', () => {
             controlsModal.classList.remove('hidden');
@@ -314,6 +361,7 @@ class Game {
         window.addEventListener('click', (event) => {
             if (event.target === controlsModal) controlsModal.classList.add('hidden');
             if (event.target === settingsModal) settingsModal.classList.add('hidden');
+            if (event.target === inventoryModal) this.closeInventoryModal();
         });
     }
 
@@ -323,10 +371,6 @@ class Game {
     setupHotbarIcons() {
         const slots = document.querySelectorAll('.hotbar-slot');
         slots.forEach(slot => {
-            const canvas = slot.querySelector('.slot-icon');
-            const blockId = parseInt(slot.dataset.blockId);
-            TextureGenerator.drawBlockIcon(canvas, blockId);
-            
             // Xử lý sự kiện nhấn chọn slot hotbar bằng chuột
             slot.addEventListener('click', () => {
                 const index = parseInt(slot.dataset.slot);
@@ -334,7 +378,42 @@ class Game {
             });
         });
         
+        this.updateHotbarHUD();
         this.selectHotbarSlot(0);
+    }
+
+    /**
+     * Đồng bộ hoá hiển thị các icon 3D và số lượng vật phẩm trong Hotbar HUD
+     */
+    updateHotbarHUD() {
+        const slots = document.querySelectorAll('.hotbar-slot');
+        slots.forEach(slot => {
+            const canvas = slot.querySelector('.slot-icon');
+            const index = parseInt(slot.dataset.slot);
+            const itemId = this.hotbarBlocks[index];
+            
+            // Vẽ lại biểu tượng (khối 3D hoặc dụng cụ)
+            TextureGenerator.drawBlockIcon(canvas, itemId);
+            
+            // Cập nhật nhãn số lượng vật phẩm
+            const countSpan = slot.querySelector('.slot-count');
+            if (countSpan) {
+                if (this.player.gameMode === 'creative') {
+                    countSpan.textContent = '∞';
+                    slot.style.opacity = '1.0';
+                } else {
+                    const qty = this.player.inventory[itemId] || 0;
+                    countSpan.textContent = `x${qty}`;
+                    
+                    // Làm mờ slot nếu số lượng = 0 để người chơi nhận biết đã dùng hết
+                    if (qty === 0) {
+                        slot.style.opacity = '0.4';
+                    } else {
+                        slot.style.opacity = '1.0';
+                    }
+                }
+            }
+        });
     }
 
     /**
@@ -355,14 +434,209 @@ class Game {
         const blockId = this.hotbarBlocks[index];
         const blockName = TextureGenerator.blockNames[blockId] || 'Voxel';
         const nameDiv = document.getElementById('block-name');
-        nameDiv.textContent = `Đang chọn: ${blockName}`;
-        nameDiv.classList.add('show');
+        if (nameDiv) {
+            nameDiv.textContent = `Đang chọn: ${blockName}`;
+            nameDiv.classList.add('show');
+            
+            // Ẩn tên sau 1.5 giây
+            if (this.hotbarTextTimeout) clearTimeout(this.hotbarTextTimeout);
+            this.hotbarTextTimeout = setTimeout(() => {
+                nameDiv.classList.remove('show');
+            }, 1500);
+        }
+    }
+
+    /**
+     * Mở modal Balo và Chế tạo (mở khóa chuột trên PC)
+     */
+    openInventoryModal() {
+        // Hủy trạng thái PointerLock của trình duyệt để có thể di chuột click
+        this.player.controls.unlock();
+        this.gamePlaying = false;
         
-        // Ẩn tên sau 1.5 giây
-        if (this.hotbarTextTimeout) clearTimeout(this.hotbarTextTimeout);
-        this.hotbarTextTimeout = setTimeout(() => {
-            nameDiv.classList.remove('show');
-        }, 1500);
+        // Nhả giữ phím đào tránh bị kẹt đào
+        this.isMiningPressed = false;
+        this.mobileMiningActive = false;
+        this.resetMining();
+
+        const inventoryModal = document.getElementById('inventoryModal');
+        if (!inventoryModal) return;
+        inventoryModal.classList.remove('hidden');
+
+        const tabBackpack = document.getElementById('tabBackpack');
+        const tabCrafting = document.getElementById('tabCrafting');
+        const backpackTabContent = document.getElementById('backpackTabContent');
+        const craftingTabContent = document.getElementById('craftingTabContent');
+
+        // Phân phối Tab giao diện dựa trên chế độ chơi hiện tại
+        if (this.player.gameMode === 'creative') {
+            // Sáng tạo: Chỉ hiện tab Balo khối, ẩn tab Chế tạo
+            if (tabBackpack) tabBackpack.classList.remove('hidden');
+            if (tabCrafting) tabCrafting.classList.add('hidden');
+            
+            if (tabBackpack) tabBackpack.click(); // Click chọn tab balo sáng tạo
+            
+            // Vẽ danh sách 18 khối sáng tạo
+            const grid = document.getElementById('creativeBackpackGrid');
+            if (grid) {
+                grid.innerHTML = '';
+                for (let id = 1; id <= 18; id++) {
+                    const item = document.createElement('div');
+                    item.className = 'inventory-grid-item';
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 44;
+                    canvas.height = 44;
+                    TextureGenerator.drawBlockIcon(canvas, id);
+                    item.appendChild(canvas);
+                    
+                    const name = document.createElement('div');
+                    name.className = 'inventory-item-name';
+                    name.textContent = TextureGenerator.blockNames[id];
+                    item.appendChild(name);
+                    
+                    item.addEventListener('click', () => {
+                        // Kéo khối chọn vào slot hotbar hiện hành
+                        this.hotbarBlocks[this.selectedSlot] = id;
+                        this.updateHotbarHUD();
+                        this.closeInventoryModal();
+                    });
+                    
+                    grid.appendChild(item);
+                }
+            }
+        } else {
+            // Sinh tồn: Ẩn tab Balo, chỉ hiện tab Chế tạo công cụ/vũ khí
+            if (tabBackpack) tabBackpack.classList.add('hidden');
+            if (tabCrafting) tabCrafting.classList.remove('hidden');
+            
+            if (tabCrafting) tabCrafting.click(); // Click chọn tab chế tạo
+            
+            // Cập nhật nguyên liệu hiện có
+            const resourcesGrid = document.getElementById('survivalResourcesGrid');
+            if (resourcesGrid) {
+                resourcesGrid.innerHTML = '';
+                let hasAnyResource = false;
+                
+                for (const [itemId, qty] of Object.entries(this.player.inventory)) {
+                    if (qty > 0) {
+                        hasAnyResource = true;
+                        const pill = document.createElement('div');
+                        pill.className = 'resource-pill';
+                        
+                        const name = TextureGenerator.blockNames[itemId] || itemId;
+                        pill.innerHTML = `<span>${name}:</span> <strong>${qty}</strong>`;
+                        resourcesGrid.appendChild(pill);
+                    }
+                }
+                
+                if (!hasAnyResource) {
+                    resourcesGrid.innerHTML = '<span style="font-size:10px; color:#aaa; font-style:italic;">Trống rỗng (Hãy đi đào gỗ, đào đất...)</span>';
+                }
+            }
+
+            // Định nghĩa các công thức chế tạo trong Sinh tồn
+            const recipes = [
+                {
+                    id: 'planks',
+                    name: 'Ván Gỗ (x4)',
+                    requires: { 4: 1 }, // 1 Gỗ Sồi
+                    gives: { 10: 4 }   // 4 Ván Gỗ
+                },
+                {
+                    id: 'stick',
+                    name: 'Gậy Gỗ (x4)',
+                    requires: { 10: 2 }, // 2 Ván Gỗ
+                    gives: { 'stick': 4 } // 4 Gậy
+                },
+                {
+                    id: 'stone_sword',
+                    name: 'Kiếm Đá (Vũ khí)',
+                    requires: { 'stick': 1, 9: 2 }, // 1 Gậy, 2 Đá Cuội
+                    gives: { 'stone_sword': 1 }
+                },
+                {
+                    id: 'stone_pickaxe',
+                    name: 'Cúp Đá (Công cụ)',
+                    requires: { 'stick': 2, 9: 3 }, // 2 Gậy, 3 Đá Cuội
+                    gives: { 'stone_pickaxe': 1 }
+                }
+            ];
+
+            // Vẽ danh sách công thức chế tạo
+            const recipesGrid = document.getElementById('craftingRecipesGrid');
+            if (recipesGrid) {
+                recipesGrid.innerHTML = '';
+                
+                recipes.forEach(recipe => {
+                    const card = document.createElement('div');
+                    card.className = 'recipe-card';
+                    
+                    const info = document.createElement('div');
+                    info.className = 'recipe-info';
+                    
+                    const title = document.createElement('div');
+                    title.className = 'recipe-title';
+                    title.textContent = recipe.name;
+                    info.appendChild(title);
+                    
+                    const reqs = document.createElement('div');
+                    reqs.className = 'recipe-ingredients';
+                    
+                    const reqParts = [];
+                    for (const [reqId, reqQty] of Object.entries(recipe.requires)) {
+                        const name = TextureGenerator.blockNames[reqId] || reqId;
+                        reqParts.push(`${name} (${reqQty})`);
+                    }
+                    reqs.textContent = "Yêu cầu: " + reqParts.join(', ');
+                    info.appendChild(reqs);
+                    
+                    card.appendChild(info);
+                    
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-craft';
+                    btn.textContent = 'CHẾ TẠO';
+                    
+                    const canCraft = this.player.hasIngredients(recipe.requires);
+                    if (canCraft) {
+                        btn.classList.add('active');
+                        btn.addEventListener('click', () => {
+                            if (this.player.craftItem(recipe)) {
+                                // Tự động trang bị công cụ vừa tạo vào Hotbar
+                                if (recipe.id === 'stone_sword') {
+                                    this.hotbarBlocks[7] = 'stone_sword'; // Ô số 8
+                                } else if (recipe.id === 'stone_pickaxe') {
+                                    this.hotbarBlocks[8] = 'stone_pickaxe'; // Ô số 9
+                                }
+                                this.updateHotbarHUD();
+                                this.openInventoryModal(); // Vẽ lại giao diện
+                            }
+                        });
+                    }
+                    
+                    card.appendChild(btn);
+                    recipesGrid.appendChild(card);
+                });
+            }
+        }
+    }
+
+    /**
+     * Đóng modal balo và tiếp tục chơi (Yêu cầu PointerLock nếu là PC)
+     */
+    closeInventoryModal() {
+        const inventoryModal = document.getElementById('inventoryModal');
+        if (!inventoryModal) return;
+        inventoryModal.classList.add('hidden');
+
+        if (this.player.isTouchDevice) {
+            this.gamePlaying = true;
+            const pauseBtn = document.getElementById('mobilePauseBtn');
+            if (pauseBtn) pauseBtn.classList.add('show-btn');
+        } else {
+            // Tự động PointerLock lại trên máy tính
+            this.player.controls.lock();
+        }
     }
 
     /**
@@ -416,15 +690,18 @@ class Game {
             this.selectHotbarSlot(index);
         });
 
-        // 3. Phá/Đặt khối qua click Chuột Trái / Chuột Phải
+        // 3. Phá/Đặt khối qua click Chuột Trái / Chuột Phải (Hỗ trợ giữ chuột đào dần)
         window.addEventListener('mousedown', (event) => {
             if (!isGameInputActive()) return;
             
             if (event.button === 0) {
-                // Chuột trái -> Đánh quái trước, hụt mới phá đất
+                // Chuột trái -> Đánh quái trước
                 const hitMob = this.handleAttack();
-                if (!hitMob) {
-                    this.handleBlockBreak();
+                if (hitMob) {
+                    this.isMiningPressed = false;
+                } else {
+                    // Nếu không đánh trúng quái vật -> Kích hoạt đào khối theo thời gian
+                    this.isMiningPressed = true;
                 }
             } else if (event.button === 2) {
                 // Chuột phải -> Đặt khối
@@ -432,17 +709,66 @@ class Game {
             }
         });
 
-        // 4. Sự kiện chạm nút hành động cảm ứng di động (Đập 🔨 & Đặt 🧱)
+        window.addEventListener('mouseup', (event) => {
+            if (event.button === 0) {
+                this.isMiningPressed = false;
+                this.resetMining();
+            }
+        });
+
+        // 3.5 Nhả chuột khi mất tập trung hoặc thoát PointerLock
+        this.player.controls.addEventListener('unlock', () => {
+            this.isMiningPressed = false;
+            this.resetMining();
+        });
+
+        // 3.8 Phím E mở kho đồ
+        window.addEventListener('keydown', (event) => {
+            if (event.key.toLowerCase() === 'e') {
+                const isPlaying = startScreen.classList.contains('hidden') && 
+                                  pauseScreen.classList.contains('hidden') && 
+                                  (!document.getElementById('deathScreen') || document.getElementById('deathScreen').classList.contains('hidden'));
+                
+                const isInventoryOpen = !inventoryModal.classList.contains('hidden');
+                
+                if (isPlaying || isInventoryOpen) {
+                    if (isInventoryOpen) {
+                        this.closeInventoryModal();
+                    } else {
+                        this.openInventoryModal();
+                    }
+                }
+            }
+        });
+
+        // 4. Sự kiện chạm nút hành động cảm ứng di động (Đập 🔨, Đặt 🧱, Mở Balo 🎒)
         const mobileBreakBtn = document.getElementById('mobileBreakBtn');
         const mobilePlaceBtn = document.getElementById('mobilePlaceBtn');
+        const mobileBackpackBtn = document.getElementById('mobileBackpackBtn');
 
         if (mobileBreakBtn) {
             mobileBreakBtn.addEventListener('touchstart', (event) => {
                 event.preventDefault();
                 if (isGameInputActive()) {
                     const hitMob = this.handleAttack();
-                    if (!hitMob) this.handleBlockBreak();
+                    if (hitMob) {
+                        this.mobileMiningActive = false;
+                    } else {
+                        this.mobileMiningActive = true;
+                    }
                 }
+            });
+
+            mobileBreakBtn.addEventListener('touchend', (event) => {
+                event.preventDefault();
+                this.mobileMiningActive = false;
+                this.resetMining();
+            });
+
+            mobileBreakBtn.addEventListener('touchcancel', (event) => {
+                event.preventDefault();
+                this.mobileMiningActive = false;
+                this.resetMining();
             });
         }
 
@@ -450,6 +776,19 @@ class Game {
             mobilePlaceBtn.addEventListener('touchstart', (event) => {
                 event.preventDefault();
                 if (isGameInputActive()) this.handleBlockPlace();
+            });
+        }
+
+        if (mobileBackpackBtn) {
+            mobileBackpackBtn.addEventListener('touchstart', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                if (inventoryModal.classList.contains('hidden')) {
+                    this.openInventoryModal();
+                } else {
+                    this.closeInventoryModal();
+                }
             });
         }
 
@@ -586,31 +925,58 @@ class Game {
     /**
      * Xử lý xoá khối khi nhấp chuột trái
      */
+    /**
+     * Xử lý xoá khối và cộng vật phẩm vào kho đồ (Chế độ Sinh tồn)
+     */
     handleBlockBreak() {
         if (this.targetedBlock && this.targetedBlock.hit) {
             const { x, y, z } = this.targetedBlock;
             
-            // Đặt khối thành Không khí (0)
+            // Đọc ID khối chuẩn bị đập trước khi xóa đi
+            const brokenBlockId = this.world.getBlock(x, y, z);
+            
+            // Xóa khối khỏi bản đồ thế giới (Không khí = 0)
             this.world.setBlock(x, y, z, 0);
             
             // Vẽ lại các chunk thay đổi ngay lập tức
             this.world.updateChunks(this.player.position.x, this.player.position.z);
+
+            // Sinh tồn: Nhặt khối đó vào balo túi đồ
+            if (this.player.gameMode === 'survival' && brokenBlockId > 0) {
+                this.player.addItem(brokenBlockId, 1);
+            }
         }
     }
 
     /**
-     * Xử lý đặt khối khi nhấp chuột phải
+     * Xử lý đặt khối và tiêu hao vật phẩm trong balo (Chế độ Sinh tồn)
      */
     handleBlockPlace() {
         if (this.targetedBlock && this.targetedBlock.hit) {
             const { x, y, z, nx, ny, nz } = this.targetedBlock;
             
-            // Toạ độ khối mới kế bên khối nhắm bắn dựa trên Vector pháp tuyến
+            const blockToPlace = this.hotbarBlocks[this.selectedSlot];
+
+            // 1. Nếu là vũ khí hoặc công cụ thì tuyệt đối KHÔNG cho đặt xuống thế giới
+            if (blockToPlace === 'stone_sword' || blockToPlace === 'stone_pickaxe') {
+                return;
+            }
+
+            // 2. Chế độ Sinh tồn: Kiểm tra số lượng khối trong balo
+            if (this.player.gameMode === 'survival') {
+                const qty = this.player.inventory[blockToPlace] || 0;
+                if (qty <= 0) {
+                    this.player.showSystemMessage("Bạn không có khối này để đặt!");
+                    return;
+                }
+            }
+            
+            // Toạ độ khối mới kề bên khối nhắm bắn dựa trên Vector pháp tuyến mặt chạm
             const px = x + nx;
             const py = y + ny;
             const pz = z + nz;
             
-            // Ngăn chặn đặt khối đè lên vị trí người chơi đang đứng (Tránh kẹt người)
+            // 3. Ngăn chặn đặt khối đè lên cơ thể người chơi (Tránh kẹt vật lý)
             const pBox = {
                 minX: this.player.position.x - this.player.width / 2,
                 maxX: this.player.position.x + this.player.width / 2,
@@ -635,12 +1001,133 @@ class Game {
                 return;
             }
 
-            // Đặt khối được chọn từ Hotbar
-            const blockToPlace = this.hotbarBlocks[this.selectedSlot];
+            // Đặt khối
             this.world.setBlock(px, py, pz, blockToPlace);
             
+            // Tiêu hao 1 vật phẩm trong túi đồ Sinh tồn
+            if (this.player.gameMode === 'survival') {
+                this.player.removeItem(blockToPlace, 1);
+            }
+
             // Cập nhật thế giới
             this.world.updateChunks(this.player.position.x, this.player.position.z);
+        }
+    }
+
+    /**
+     * Cập nhật tiến trình đào khối theo thời gian dựa trên độ cứng
+     */
+    updateMining(dt) {
+        const isMiningActive = this.isMiningPressed || this.mobileMiningActive;
+
+        // Nếu không bấm phím đào hoặc không nhắm trúng khối nào
+        if (!isMiningActive || !this.targetedBlock || !this.targetedBlock.hit) {
+            this.resetMining();
+            return;
+        }
+
+        const { x, y, z } = this.targetedBlock;
+        const blockId = this.world.getBlock(x, y, z);
+
+        // Không đào được không khí
+        if (blockId === 0) {
+            this.resetMining();
+            return;
+        }
+
+        // Kiểm tra xem có đang tiếp tục đào khối cũ ở khung hình trước không
+        const isSameBlock = this.miningBlockCoords &&
+                            this.miningBlockCoords.x === x &&
+                            this.miningBlockCoords.y === y &&
+                            this.miningBlockCoords.z === z;
+
+        if (!isSameBlock) {
+            // Bắt đầu đào khối mới
+            this.miningBlockCoords = { x, y, z };
+            this.miningProgress = 0;
+            this.miningTimeNeeded = this.getBlockHardness(blockId);
+
+            // Sáng tạo phá block ngay lập tức (0 giây)
+            if (this.player.gameMode === 'creative') {
+                this.miningTimeNeeded = 0;
+            }
+        }
+
+        // Tích luỹ tiến trình thời gian đào khối
+        this.miningProgress += dt;
+
+        // Vẽ đồ họa tiến trình đào (vòng tròn tiến độ SVG)
+        const circle = document.getElementById('miningProgressCircle');
+        if (circle && this.miningTimeNeeded > 0) {
+            const ratio = Math.min(1.0, this.miningProgress / this.miningTimeNeeded);
+            // Chu vi hình tròn r=12 là 75.4. Đưa dashoffset từ 75.4 (chưa đào) về 0 (đào xong)
+            circle.style.strokeDashoffset = 75.4 - (ratio * 75.4);
+        }
+
+        // Đào xong khối
+        if (this.miningProgress >= this.miningTimeNeeded) {
+            this.handleBlockBreak();
+            this.resetMining();
+        }
+    }
+
+    /**
+     * Reset toàn bộ trạng thái đào khối
+     */
+    resetMining() {
+        this.miningBlockCoords = null;
+        this.miningProgress = 0;
+        this.miningTimeNeeded = 0;
+
+        const circle = document.getElementById('miningProgressCircle');
+        if (circle) {
+            circle.style.strokeDashoffset = 75.4; // Đưa vòng tiến độ về ẩn hoàn toàn
+        }
+    }
+
+    /**
+     * Lấy độ cứng (thời gian đào - giây) của từng loại khối voxel
+     */
+    getBlockHardness(blockId) {
+        // Kiểm tra xem người chơi có đang cầm Cúp Đá (stone_pickaxe) không
+        const activeItem = this.hotbarBlocks[this.selectedSlot];
+        const hasPickaxe = (activeItem === 'stone_pickaxe');
+        
+        // Cúp đá giúp tăng tốc độ khai thác đá và quặng gấp 4 lần (giảm 75% thời gian đào)
+        const speedMultiplier = hasPickaxe ? 4.0 : 1.0;
+
+        switch (blockId) {
+            case 5:  // Khối Lá sồi
+            case 7:  // Khối Kính
+                return 0.1; // Khối cực giòn, đào tức thì
+            case 15: // Len Đỏ
+            case 16: // Len Xanh
+                return 0.2;
+            case 1:  // Khối Cỏ
+            case 2:  // Khối Đất
+            case 8:  // Khối Cát
+            case 17: // Đá Phát Sáng
+                return 0.3;
+            case 10: // Khối Ván Gỗ
+                return 0.6;
+            case 4:  // Khối Gỗ sồi
+                return 0.8;
+            case 3:  // Khối Đá thường
+            case 9:  // Khối Đá cuội
+                return 1.5 / speedMultiplier;
+            case 6:  // Khối Gạch đỏ
+            case 11: // Quặng Than
+                return 1.8 / speedMultiplier;
+            case 12: // Quặng Sắt
+                return 2.0 / speedMultiplier;
+            case 13: // Quặng Vàng
+                return 2.2 / speedMultiplier;
+            case 14: // Quặng Kim cương
+                return 2.5 / speedMultiplier;
+            case 18: // Đá Hắc Diệu Thạch (Obsidian - khối siêu cứng)
+                return 5.0 / speedMultiplier;
+            default:
+                return 0.5;
         }
     }
 
@@ -733,6 +1220,9 @@ class Game {
 
         // 4. Quét tia Raycast để ngắm khối
         this.updateRaycasting();
+
+        // 4.5 Cập nhật tiến trình đào khối theo thời gian
+        this.updateMining(dt);
 
         // 5. Cập nhật chu kỳ ngày đêm
         this.updateDayNightCycle(dt);

@@ -139,8 +139,19 @@ class World {
                         // Khối trung gian dưới cỏ là Đất
                         data[index] = 2; // Đất (Dirt)
                     } else if (ry < height - 3) {
-                        // Sâu hơn nữa là Đá cứng
-                        data[index] = 3; // Đá (Stone)
+                        // Sâu hơn nữa là Đá cứng hoặc Quặng rải rác theo độ sâu
+                        const rand = Math.random();
+                        if (ry < 10 && rand < 0.012) {
+                            data[index] = 14; // Quặng Kim cương (Rất hiếm, dưới tầng sâu 10)
+                        } else if (ry < 18 && rand < 0.02) {
+                            data[index] = 13; // Quặng Vàng (Hiếm, dưới tầng sâu 18)
+                        } else if (ry < 28 && rand < 0.035) {
+                            data[index] = 12; // Quặng Sắt (Dưới tầng sâu 28)
+                        } else if (rand < 0.06) {
+                            data[index] = 11; // Quặng Than (Dưới tầng sâu mặt đất)
+                        } else {
+                            data[index] = 3; // Đá (Stone)
+                        }
                     } else {
                         data[index] = 0; // Không khí (Air)
                     }

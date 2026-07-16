@@ -130,11 +130,22 @@ body, html {
 
 .slot-num {
     position: absolute;
-    bottom: 2px;
-    right: 4px;
+    top: 4px;
+    left: 4px;
     font-family: var(--font-pixel);
     font-size: 8px;
-    color: #fff;
+    color: rgba(255, 255, 255, 0.45);
+    text-shadow: 1px 1px 0px #000;
+    pointer-events: none;
+}
+
+.slot-count {
+    position: absolute;
+    bottom: 4px;
+    right: 6px;
+    font-family: var(--font-pixel);
+    font-size: 8px;
+    color: #fbc531; /* Màu vàng cam Minecraft nổi bật */
     text-shadow: 1px 1px 0px #000;
     pointer-events: none;
 }
@@ -650,4 +661,108 @@ body, html {
 
 .heart-icon.lost {
     color: #3d3d3d; /* Tim đen xám khi mất máu */
+}
+
+/* Kiểu dáng cho Balo Sáng tạo & Chế tạo */
+.tab-btn.active {
+    background: var(--primary) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 0px #386725 !important;
+}
+
+.inventory-grid-item {
+    width: 68px;
+    height: 68px;
+    background: rgba(0,0,0,0.4);
+    border: 2px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+    position: relative;
+}
+
+.inventory-grid-item:hover, .inventory-grid-item:active {
+    background: rgba(255,255,255,0.1);
+    border-color: var(--primary-hover);
+}
+
+.inventory-item-name {
+    font-size: 7px;
+    color: #ccc;
+    margin-top: 4px;
+    text-align: center;
+    max-width: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-ui);
+}
+
+/* Tài nguyên trong chế độ sinh tồn */
+.resource-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 9px;
+    color: #ddd;
+}
+
+/* Các công thức chế tạo */
+.recipe-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 10px;
+    border-radius: 6px;
+    gap: 10px;
+}
+
+.recipe-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.recipe-title {
+    font-family: var(--font-pixel);
+    font-size: 8px;
+    color: #fff;
+}
+
+.recipe-ingredients {
+    font-size: 9px;
+    color: var(--text-muted);
+}
+
+.btn-craft {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    background: #555;
+    color: #aaa;
+    cursor: not-allowed;
+}
+
+.btn-craft.active {
+    background: var(--primary);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 3px 0px #386725;
+}
+
+.btn-craft.active:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0px #386725;
 }

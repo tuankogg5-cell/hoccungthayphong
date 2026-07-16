@@ -62,6 +62,10 @@ class Player {
         this.lastYVelocity = 0;     // Để tính toán sát thương rơi
         this.invulnerableTimer = 0; // Thời gian bất tử sau khi dính đòn
 
+        // Kho đồ & dụng cụ
+        this.inventory = {};
+        this.initInventory();
+
         this.setupInput();
     }
 
@@ -459,6 +463,87 @@ class Player {
     }
 
     /**
+     * Khởi tạo túi đồ rỗng (Chế độ Sinh tồn) hoặc đầy (Chế độ Sáng tạo)
+     */
+    initInventory() {
+        this.inventory = {};
+        // 18 loại khối voxel
+        for (let i = 1; i <= 18; i++) {
+            this.inventory[i] = 0;
+        }
+        // Các nguyên liệu / dụng cụ phụ trợ
+        this.inventory['stick'] = 0;
+        this.inventory['stone_sword'] = 0;
+        this.inventory['stone_pickaxe'] = 0;
+    }
+
+    /**
+     * Thêm vật phẩm vào kho đồ
+     */
+    addItem(itemId, amount = 1) {
+        if (!this.inventory[itemId] && this.inventory[itemId] !== 0) {
+            this.inventory[itemId] = 0;
+        }
+        this.inventory[itemId] += amount;
+        
+        // Hiện thông báo hệ thống nhặt được vật phẩm
+        const ItemNames = TextureGenerator.blockNames;
+        const name = ItemNames[itemId] || itemId;
+        this.showSystemMessage(`+${amount} ${name}`);
+
+        // Cập nhật giao diện Hotbar nếu có thay đổi vật phẩm
+        if (window.gameInstance) {
+            window.gameInstance.updateHotbarHUD();
+        }
+    }
+
+    /**
+     * Bớt vật phẩm khỏi kho đồ
+     */
+    removeItem(itemId, amount = 1) {
+        if (!this.inventory[itemId]) return;
+        this.inventory[itemId] = Math.max(0, this.inventory[itemId] - amount);
+        
+        if (window.gameInstance) {
+            window.gameInstance.updateHotbarHUD();
+        }
+    }
+
+    /**
+     * Kiểm tra xem túi đồ có đủ nguyên liệu chế tạo không
+     */
+    hasIngredients(requires) {
+        for (const [itemId, qty] of Object.entries(requires)) {
+            const currentQty = this.inventory[itemId] || 0;
+            if (currentQty < qty) return false;
+        }
+        return true;
+    }
+
+    /**
+     * Thực hiện chế tạo vật phẩm
+     */
+    craftItem(recipe) {
+        if (!this.hasIngredients(recipe.requires)) {
+            this.showSystemMessage("Không đủ nguyên liệu chế tạo!");
+            return false;
+        }
+
+        // Trừ nguyên liệu tiêu hao
+        for (const [itemId, qty] of Object.entries(recipe.requires)) {
+            this.removeItem(itemId, qty);
+        }
+
+        // Cộng sản phẩm nhận được
+        for (const [itemId, qty] of Object.entries(recipe.gives)) {
+            this.addItem(itemId, qty);
+        }
+
+        this.showSystemMessage(`Đã chế tạo thành công: ${recipe.name}`);
+        return true;
+    }
+
+    /**
      * Chuyển đổi chế độ chơi
      */
     setGameMode(mode) {
@@ -466,10 +551,14 @@ class Player {
         if (mode === 'survival') {
             this.flightMode = false;
             this.hp = this.maxHp;
+            this.initInventory(); // Bắt đầu Sinh tồn với 0 block đúng yêu cầu
         } else {
-            this.hp = this.maxHp; // Creative thì coi như đầy máu
+            this.hp = this.maxHp; // Sáng tạo bất tử
         }
         this.updateHealthHUD();
+        if (window.gameInstance) {
+            window.gameInstance.updateHotbarHUD();
+        }
     }
 
     /**

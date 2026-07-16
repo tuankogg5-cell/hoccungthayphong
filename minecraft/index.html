@@ -19,7 +19,14 @@
     <canvas id="gameCanvas"></canvas>
 
     <!-- Crosshair (Tâm ngắm) -->
-    <div id="crosshair">+</div>
+    <div id="crosshair">
+        +
+        <!-- Vòng tròn tiến trình đào khối -->
+        <svg id="miningProgressRing" width="30" height="30" style="position: absolute; top: -3px; left: -3px; transform: rotate(-90deg); pointer-events: none;">
+            <circle cx="15" cy="15" r="12" stroke="rgba(255,255,255,0.2)" stroke-width="2" fill="transparent" />
+            <circle id="miningProgressCircle" cx="15" cy="15" r="12" stroke="#fbc531" stroke-width="2.5" fill="transparent" stroke-dasharray="75.4" stroke-dashoffset="75.4" />
+        </svg>
+    </div>
 
     <!-- Nút tạm dừng trên di động -->
     <button id="mobilePauseBtn" class="hidden">⏸</button>
@@ -34,38 +41,47 @@
             <div class="hotbar-slot active" data-slot="0" data-block-id="1">
                 <canvas class="slot-icon" width="32" height="32"></canvas>
                 <span class="slot-num">1</span>
+                <span class="slot-count">x0</span>
             </div>
             <div class="hotbar-slot" data-slot="1" data-block-id="2">
                 <canvas class="slot-icon" width="32" height="32"></canvas>
                 <span class="slot-num">2</span>
+                <span class="slot-count">x0</span>
             </div>
             <div class="hotbar-slot" data-slot="2" data-block-id="3">
                 <canvas class="slot-icon" width="32" height="32"></canvas>
                 <span class="slot-num">3</span>
+                <span class="slot-count">x0</span>
             </div>
             <div class="hotbar-slot" data-slot="3" data-block-id="4">
                 <canvas class="slot-icon" width="32" height="32"></canvas>
                 <span class="slot-num">4</span>
+                <span class="slot-count">x0</span>
             </div>
             <div class="hotbar-slot" data-slot="4" data-block-id="5">
                 <canvas class="slot-icon" width="32" height="32"></canvas>
                 <span class="slot-num">5</span>
+                <span class="slot-count">x0</span>
             </div>
             <div class="hotbar-slot" data-slot="5" data-block-id="6">
                 <canvas class="slot-icon" width="32" height="32"></canvas>
                 <span class="slot-num">6</span>
+                <span class="slot-count">x0</span>
             </div>
             <div class="hotbar-slot" data-slot="6" data-block-id="7">
                 <canvas class="slot-icon" width="32" height="32"></canvas>
                 <span class="slot-num">7</span>
+                <span class="slot-count">x0</span>
             </div>
             <div class="hotbar-slot" data-slot="7" data-block-id="8">
                 <canvas class="slot-icon" width="32" height="32"></canvas>
                 <span class="slot-num">8</span>
+                <span class="slot-count">x0</span>
             </div>
             <div class="hotbar-slot" data-slot="8" data-block-id="9">
                 <canvas class="slot-icon" width="32" height="32"></canvas>
                 <span class="slot-num">9</span>
+                <span class="slot-count">x0</span>
             </div>
         </div>
         <div id="block-name">Đang chọn: Khối Cỏ</div>
@@ -168,6 +184,53 @@
             <button id="mobileBreakBtn" class="mobile-action-btn">🔨</button>
             <button id="mobilePlaceBtn" class="mobile-action-btn">🧱</button>
             <button id="mobileJumpBtn" class="mobile-action-btn">▲</button>
+            <button id="mobileBackpackBtn" class="mobile-action-btn" style="background: rgba(251, 197, 49, 0.45); border-color: rgba(251, 197, 49, 0.3);">🎒</button>
+        </div>
+    </div>
+
+    <!-- Modal Balo & Chế tạo (Backpack & Crafting) -->
+    <div id="inventoryModal" class="modal hidden" style="z-index: 400;">
+        <div class="modal-content glass-panel" style="max-width: 600px; width: 95%; max-height: 85vh;">
+            <span class="close-btn" id="closeInventory">&times;</span>
+            <h2 id="inventoryTitle" style="font-size: 14px; text-shadow: 2px 2px 0px rgba(0,0,0,0.4); margin-bottom: 20px;">KHO ĐỒ & CHẾ TẠO</h2>
+            
+            <!-- Tab Headers -->
+            <div class="tabs-container" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;">
+                <button id="tabBackpack" class="tab-btn active" style="flex: 1; padding: 10px; font-family: 'Press Start 2P', monospace; font-size: 8px; border: none; border-radius: 4px; background: var(--primary); color: #fff; cursor: pointer;">🎒 BALO SÁNG TẠO</button>
+                <button id="tabCrafting" class="tab-btn" style="flex: 1; padding: 10px; font-family: 'Press Start 2P', monospace; font-size: 8px; border: none; border-radius: 4px; background: rgba(255,255,255,0.1); color: #ccc; cursor: pointer;">🔧 CHẾ TẠO SINH TỒN</button>
+            </div>
+            
+            <!-- Tab Contents -->
+            <div class="tab-content-wrapper" style="overflow-y: auto; max-height: 50vh; padding-right: 5px;">
+                <!-- Tab Balo Sáng tạo -->
+                <div id="backpackTabContent" class="tab-panel">
+                    <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 15px; text-align: center;">Click vào khối để gán vào ô Hotbar đang chọn</p>
+                    <div class="inventory-grid" id="creativeBackpackGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 10px; justify-items: center;">
+                        <!-- Sẽ được vẽ động bằng JS -->
+                    </div>
+                </div>
+                
+                <!-- Tab Chế tạo Sinh tồn -->
+                <div id="craftingTabContent" class="tab-panel hidden">
+                    <div class="crafting-container">
+                        <!-- Tài nguyên đang có -->
+                        <div class="survival-resources">
+                            <h3 style="font-size: 13px; color: #fbc531; margin-bottom: 10px; border-left: 3px solid #fbc531; padding-left: 8px;">Tài nguyên đang có:</h3>
+                            <div class="resources-grid" id="survivalResourcesGrid" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px;">
+                                <!-- Điền động nguyên liệu đang có -->
+                            </div>
+                        </div>
+                        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 15px 0;">
+                        <!-- Công thức chế tạo -->
+                        <div class="recipes-list">
+                            <h3 style="font-size: 13px; color: var(--primary-hover); margin-bottom: 10px; border-left: 3px solid var(--primary-hover); padding-left: 8px;">Công thức chế tạo:</h3>
+                            <div class="recipes-grid" id="craftingRecipesGrid" style="display: flex; flex-direction: column; gap: 12px;">
+                                <!-- Điền động công thức -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

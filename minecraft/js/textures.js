@@ -6,8 +6,8 @@ const TextureGenerator = {
     // Kích thước của mỗi texture đơn lẻ (pixel)
     tileSize: 32,
     
-    // Bản đồ cấu hình vị trí các texture trong Atlas (Grid 4x4)
-    // Cú pháp: [Hàng, Cột] từ 0 -> 3
+    // Bản đồ cấu hình vị trí các texture trong Atlas (Grid 5x5)
+    // Cú pháp: [Hàng, Cột] từ 0 -> 4
     atlasMap: {
         grass_top:    [0, 0],
         grass_side:   [0, 1],
@@ -20,7 +20,15 @@ const TextureGenerator = {
         glass:        [2, 0],
         sand:         [2, 1],
         cobblestone:  [2, 2],
-        planks:       [2, 3]
+        planks:       [2, 3],
+        coal_ore:     [3, 0],
+        iron_ore:     [3, 1],
+        gold_ore:     [3, 2],
+        diamond_ore:  [3, 3],
+        red_wool:     [4, 0],
+        blue_wool:    [4, 1],
+        glowstone:    [4, 2],
+        obsidian:     [4, 3]
     },
 
     // Bản đồ định nghĩa 6 mặt của mỗi block ID sử dụng texture nào
@@ -35,7 +43,15 @@ const TextureGenerator = {
         7: ['glass', 'glass', 'glass', 'glass', 'glass', 'glass'],                         // Glass (7)
         8: ['sand', 'sand', 'sand', 'sand', 'sand', 'sand'],                               // Sand (8)
         9: ['cobblestone', 'cobblestone', 'cobblestone', 'cobblestone', 'cobblestone', 'cobblestone'], // Cobble (9)
-        10: ['planks', 'planks', 'planks', 'planks', 'planks', 'planks']                   // Planks (10)
+        10: ['planks', 'planks', 'planks', 'planks', 'planks', 'planks'],                  // Planks (10)
+        11: ['coal_ore', 'coal_ore', 'coal_ore', 'coal_ore', 'coal_ore', 'coal_ore'],
+        12: ['iron_ore', 'iron_ore', 'iron_ore', 'iron_ore', 'iron_ore', 'iron_ore'],
+        13: ['gold_ore', 'gold_ore', 'gold_ore', 'gold_ore', 'gold_ore', 'gold_ore'],
+        14: ['diamond_ore', 'diamond_ore', 'diamond_ore', 'diamond_ore', 'diamond_ore', 'diamond_ore'],
+        15: ['red_wool', 'red_wool', 'red_wool', 'red_wool', 'red_wool', 'red_wool'],
+        16: ['blue_wool', 'blue_wool', 'blue_wool', 'blue_wool', 'blue_wool', 'blue_wool'],
+        17: ['glowstone', 'glowstone', 'glowstone', 'glowstone', 'glowstone', 'glowstone'],
+        18: ['obsidian', 'obsidian', 'obsidian', 'obsidian', 'obsidian', 'obsidian']
     },
 
     // Tên hiển thị tiếng Việt của các khối
@@ -49,14 +65,24 @@ const TextureGenerator = {
         7: 'Khối Kính',
         8: 'Khối Cát',
         9: 'Khối Đá Cuội',
-        10: 'Khối Ván Gỗ'
+        10: 'Khối Ván Gỗ',
+        11: 'Quặng Than',
+        12: 'Quặng Sắt',
+        13: 'Quặng Vàng',
+        14: 'Quặng Kim Cương',
+        15: 'Len Đỏ',
+        16: 'Len Xanh',
+        17: 'Đá Phát Sáng',
+        18: 'Đá Hắc Diệu Thạch',
+        'stone_sword': 'Kiếm Đá',
+        'stone_pickaxe': 'Cúp Đá'
     },
 
     /**
-     * Tạo toàn bộ ảnh ghép Texture Atlas (128x128 pixel)
+     * Tạo toàn bộ ảnh ghép Texture Atlas (160x160 pixel)
      */
     createAtlasCanvas() {
-        const atlasSize = this.tileSize * 4; // 128x128
+        const atlasSize = this.tileSize * 5; // 160x160 (Lưới 5x5)
         const canvas = document.createElement('canvas');
         canvas.width = atlasSize;
         canvas.height = atlasSize;
@@ -279,8 +305,79 @@ const TextureGenerator = {
             ctx.fillRect(x + 8, y + 16, 1, 8);
             ctx.fillRect(x + 20, y + 24, 1, 8);
         }
+        else if (name === 'coal_ore') {
+            ctx.fillStyle = '#7f8c8d';
+            ctx.fillRect(x, y, size, size);
+            this.drawNoise(ctx, x, y, size, 127, 140, 141, 15);
+            ctx.fillStyle = '#2c3e50'; // Đốm than đen
+            this.drawOreSpots(ctx, x, y);
+        }
+        else if (name === 'iron_ore') {
+            ctx.fillStyle = '#7f8c8d';
+            ctx.fillRect(x, y, size, size);
+            this.drawNoise(ctx, x, y, size, 127, 140, 141, 15);
+            ctx.fillStyle = '#e58e26'; // Đốm sắt cam đào
+            this.drawOreSpots(ctx, x, y);
+        }
+        else if (name === 'gold_ore') {
+            ctx.fillStyle = '#7f8c8d';
+            ctx.fillRect(x, y, size, size);
+            this.drawNoise(ctx, x, y, size, 127, 140, 141, 15);
+            ctx.fillStyle = '#fbc531'; // Đốm vàng óng
+            this.drawOreSpots(ctx, x, y);
+        }
+        else if (name === 'diamond_ore') {
+            ctx.fillStyle = '#7f8c8d';
+            ctx.fillRect(x, y, size, size);
+            this.drawNoise(ctx, x, y, size, 127, 140, 141, 15);
+            ctx.fillStyle = '#00d2d3'; // Đốm kim cương xanh lam
+            this.drawOreSpots(ctx, x, y);
+        }
+        else if (name === 'red_wool') {
+            ctx.fillStyle = '#eb3b5a';
+            ctx.fillRect(x, y, size, size);
+            this.drawNoise(ctx, x, y, size, 235, 59, 90, 20);
+        }
+        else if (name === 'blue_wool') {
+            ctx.fillStyle = '#4b7bec';
+            ctx.fillRect(x, y, size, size);
+            this.drawNoise(ctx, x, y, size, 75, 123, 236, 20);
+        }
+        else if (name === 'glowstone') {
+            ctx.fillStyle = '#fed330';
+            ctx.fillRect(x, y, size, size);
+            this.drawNoise(ctx, x, y, size, 254, 211, 48, 30);
+            ctx.fillStyle = '#fffa65';
+            for (let i = 0; i < 32; i += 8) {
+                ctx.fillRect(x + i, y, 1, 32);
+                ctx.fillRect(x, y + i, 32, 1);
+            }
+        }
+        else if (name === 'obsidian') {
+            ctx.fillStyle = '#1e1b29';
+            ctx.fillRect(x, y, size, size);
+            this.drawNoise(ctx, x, y, size, 30, 27, 41, 12);
+            ctx.fillStyle = '#3c1053'; // Vết nứt tím đậm đặc trưng
+            for (let i = 0; i < 12; i++) {
+                ctx.fillRect(x + Math.floor(Math.random() * 28), y + Math.floor(Math.random() * 28), 2, 2);
+            }
+        }
 
         ctx.restore();
+    },
+
+    /**
+     * Vẽ đốm quặng khoáng sản ngẫu nhiên trên đá nền
+     */
+    drawOreSpots(ctx, x, y) {
+        const spots = [
+            [4, 6], [5, 7], [12, 18], [13, 19], [22, 8], [23, 9],
+            [8, 24], [9, 25], [18, 12], [26, 20], [27, 21], [14, 4],
+            [16, 28], [20, 16], [6, 14]
+        ];
+        spots.forEach(pt => {
+            ctx.fillRect(x + pt[0], y + pt[1], 2, 2);
+        });
     },
 
     /**
@@ -301,7 +398,7 @@ const TextureGenerator = {
     },
 
     /**
-     * Vẽ icon khối dạng 3D Isometric lên các slot Canvas của Hotbar
+     * Vẽ icon khối dạng 3D Isometric lên các slot Canvas của Hotbar hoặc vũ khí
      */
     drawBlockIcon(canvas, blockId) {
         const ctx = canvas.getContext('2d');
@@ -309,16 +406,23 @@ const TextureGenerator = {
         const h = canvas.height;
         ctx.clearRect(0, 0, w, h);
 
-        // Lấy tên các texture cho 6 mặt từ cấu hình
+        // A. Nếu là Vũ khí/Công cụ chế tạo
+        if (blockId === 'stone_sword') {
+            this.drawSwordIcon(ctx, w, h);
+            return;
+        }
+        if (blockId === 'stone_pickaxe') {
+            this.drawPickaxeIcon(ctx, w, h);
+            return;
+        }
+
+        // B. Nếu là Khối voxel (1-18)
         const textures = this.blockTextures[blockId];
         if (!textures) return;
 
         const topTex = textures[3];  // Mặt trên
         const sideTex = textures[0]; // Mặt bên
 
-        // Vì ta vẽ dạng 3D Isometric giả trên 2D Canvas:
-        // Điểm tâm đỉnh: (w/2, h/2 - 4)
-        // Ta sẽ vẽ 3 mặt chính: Trên (Top), Trái (Left), Phải (Right)
         const cx = w / 2;
         const cy = h / 2 - 2;
         const radiusX = w * 0.45;
@@ -328,16 +432,15 @@ const TextureGenerator = {
         // 1. Vẽ Mặt Trên (Top) - Hình thoi nghiêng
         ctx.save();
         ctx.beginPath();
-        ctx.moveTo(cx, cy - radiusY);             // Đỉnh trên
-        ctx.lineTo(cx + radiusX, cy);             // Đỉnh phải
-        ctx.lineTo(cx, cy + radiusY);             // Đỉnh dưới
-        ctx.lineTo(cx - radiusX, cy);             // Đỉnh trái
+        ctx.moveTo(cx, cy - radiusY);
+        ctx.lineTo(cx + radiusX, cy);
+        ctx.lineTo(cx, cy + radiusY);
+        ctx.lineTo(cx - radiusX, cy);
         ctx.closePath();
         
-        // Tạo mặt cỏ có màu xanh hoặc tô màu theo Texture
-        let topColor = '#558b2f'; // Mặc định xanh cỏ
+        let topColor = '#558b2f'; // Mặc định cỏ
         if (topTex === 'dirt') topColor = '#865439';
-        else if (topTex === 'stone') topColor = '#7f8c8d';
+        else if (topTex === 'stone' || topTex === 'coal_ore' || topTex === 'iron_ore' || topTex === 'gold_ore' || topTex === 'diamond_ore') topColor = '#7f8c8d';
         else if (topTex === 'wood_top') topColor = '#d7a15c';
         else if (topTex === 'leaves') topColor = '#1e4620';
         else if (topTex === 'brick') topColor = '#b33939';
@@ -345,6 +448,10 @@ const TextureGenerator = {
         else if (topTex === 'sand') topColor = '#f7d794';
         else if (topTex === 'cobblestone') topColor = '#747d8c';
         else if (topTex === 'planks') topColor = '#d5a96c';
+        else if (topTex === 'red_wool') topColor = '#eb3b5a';
+        else if (topTex === 'blue_wool') topColor = '#4b7bec';
+        else if (topTex === 'glowstone') topColor = '#fed330';
+        else if (topTex === 'obsidian') topColor = '#1e1b29';
         
         ctx.fillStyle = topColor;
         ctx.fill();
@@ -363,7 +470,7 @@ const TextureGenerator = {
         ctx.closePath();
 
         let leftColor = '#865439'; // Nâu mặc định
-        if (sideTex === 'stone') leftColor = '#6c7a89';
+        if (sideTex === 'stone' || sideTex === 'coal_ore' || sideTex === 'iron_ore' || sideTex === 'gold_ore' || sideTex === 'diamond_ore') leftColor = '#6c7a89';
         else if (sideTex === 'wood_side') leftColor = '#4a3329';
         else if (sideTex === 'leaves') leftColor = '#163317';
         else if (sideTex === 'brick') leftColor = '#9a3030';
@@ -371,8 +478,11 @@ const TextureGenerator = {
         else if (sideTex === 'sand') leftColor = '#dec180';
         else if (sideTex === 'cobblestone') leftColor = '#4b535d';
         else if (sideTex === 'planks') leftColor = '#b38e5b';
+        else if (sideTex === 'red_wool') leftColor = '#cf2a44';
+        else if (sideTex === 'blue_wool') leftColor = '#3863d9';
+        else if (sideTex === 'glowstone') leftColor = '#e5be27';
+        else if (sideTex === 'obsidian') leftColor = '#15121c';
         
-        // Tạo đổ bóng cho mặt bên trái (Tối hơn mặt trên 15%)
         ctx.fillStyle = leftColor;
         ctx.fill();
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
@@ -388,8 +498,8 @@ const TextureGenerator = {
         ctx.lineTo(cx, cy + radiusY + height);
         ctx.closePath();
 
-        let rightColor = '#73462f'; // Nâu tối mặc định cho mặt phải
-        if (sideTex === 'stone') rightColor = '#5c6975';
+        let rightColor = '#73462f'; // Nâu tối mặt phải
+        if (sideTex === 'stone' || sideTex === 'coal_ore' || sideTex === 'iron_ore' || sideTex === 'gold_ore' || sideTex === 'diamond_ore') rightColor = '#5c6975';
         else if (sideTex === 'wood_side') rightColor = '#3a2720';
         else if (sideTex === 'leaves') rightColor = '#0f2410';
         else if (sideTex === 'brick') rightColor = '#7d2626';
@@ -397,12 +507,88 @@ const TextureGenerator = {
         else if (sideTex === 'sand') rightColor = '#c4aa70';
         else if (sideTex === 'cobblestone') rightColor = '#3b4149';
         else if (sideTex === 'planks') rightColor = '#94754a';
+        else if (sideTex === 'red_wool') rightColor = '#b31e34';
+        else if (sideTex === 'blue_wool') rightColor = '#2b50bd';
+        else if (sideTex === 'glowstone') rightColor = '#cca61f';
+        else if (sideTex === 'obsidian') rightColor = '#0d0b12';
 
-        // Mặt phải tối hơn nữa để tạo chiều sâu 3D (Shadowing)
         ctx.fillStyle = rightColor;
         ctx.fill();
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
         ctx.stroke();
+        ctx.restore();
+    },
+
+    /**
+     * Vẽ Kiếm Đá dạng Pixel Art
+     */
+    drawSwordIcon(ctx, w, h) {
+        ctx.save();
+        ctx.scale(w / 32, h / 32);
+        
+        // Cán gỗ: (6,24) -> (9,21)
+        ctx.fillStyle = '#865439';
+        const handle = [[6,24], [7,23], [8,22], [9,21]];
+        handle.forEach(pt => ctx.fillRect(pt[0], pt[1], 2, 2));
+        
+        // Chuôi kiếm: Xám sẫm
+        ctx.fillStyle = '#4b535d';
+        const guard = [[5,21], [6,22], [8,20], [9,19], [10,20]];
+        guard.forEach(pt => ctx.fillRect(pt[0], pt[1], 2, 2));
+        
+        // Lưỡi kiếm đá: (10,18) -> (24,4)
+        ctx.fillStyle = '#a4b0be'; // Đá sáng
+        const blade = [
+            [10,18], [11,17], [12,16], [13,15], [14,14], [15,13], 
+            [16,12], [17,11], [18,10], [19,9], [20,8], [21,7],
+            [22,6], [23,5], [24,4]
+        ];
+        blade.forEach(pt => ctx.fillRect(pt[0], pt[1], 2, 2));
+
+        // Sống kiếm sẫm màu
+        ctx.fillStyle = '#747d8c';
+        const bladeEdge = [
+            [11,18], [12,17], [13,16], [14,15], [15,14], [16,13],
+            [17,12], [18,11], [19,10], [20,9], [21,8], [22,7],
+            [23,6], [24,5]
+        ];
+        bladeEdge.forEach(pt => ctx.fillRect(pt[0], pt[1], 2, 2));
+        
+        ctx.restore();
+    },
+
+    /**
+     * Vẽ Cúp Đá dạng Pixel Art
+     */
+    drawPickaxeIcon(ctx, w, h) {
+        ctx.save();
+        ctx.scale(w / 32, h / 32);
+        
+        // Cán gỗ diagonal từ (6,24) -> (20,10)
+        ctx.fillStyle = '#865439';
+        const shaft = [
+            [6,24], [7,23], [8,22], [9,21], [10,20], [11,19], 
+            [12,18], [13,17], [14,16], [15,15], [16,14], [17,13], [18,12],
+            [19,11], [20,10]
+        ];
+        shaft.forEach(pt => ctx.fillRect(pt[0], pt[1], 2, 2));
+        
+        // Lưỡi đá cuốc chim
+        ctx.fillStyle = '#4b535d'; // Đá sẫm
+        const head = [
+            [17,9], [18,8], [19,7], [20,6], [21,5], [22,5], [23,5], [24,6], [25,7],
+            [21,9], [22,10], [23,11], [24,12]
+        ];
+        head.forEach(pt => ctx.fillRect(pt[0], pt[1], 2, 2));
+
+        // Điểm nhấn đá sáng
+        ctx.fillStyle = '#a4b0be';
+        const headLight = [
+            [19,8], [20,7], [21,6], [22,6], [23,6], [24,7],
+            [22,9], [23,10]
+        ];
+        headLight.forEach(pt => ctx.fillRect(pt[0], pt[1], 2, 2));
+        
         ctx.restore();
     },
 
@@ -419,14 +605,13 @@ const TextureGenerator = {
         const coords = this.atlasMap[texName];
         if (!coords) return null;
 
-        // Toạ độ dòng/cột quy ra UV [0.0 -> 1.0]
-        // Vì trục Y của WebGL/Three.js hướng từ dưới lên, ta đảo ngược toạ độ hàng
-        const uMin = coords[1] * 0.25;
-        const uMax = (coords[1] + 1) * 0.25;
+        // Toạ độ dòng/cột quy ra UV [0.0 -> 1.0] trên lưới 5x5
+        const uMin = coords[1] * 0.2;
+        const uMax = (coords[1] + 1) * 0.2;
         
-        // Hàng 0 nằm trên cùng trong ảnh 2D Canvas (y = 0), quy đổi ra WebGL Y sẽ là 0.75 -> 1.0
-        const vMin = (3 - coords[0]) * 0.25;
-        const vMax = (4 - coords[0]) * 0.25;
+        // Trục Y WebGL hướng lên, Canvas hàng 0 ở trên cùng quy ra WebGL Y sẽ là 0.8 -> 1.0
+        const vMin = (4 - coords[0]) * 0.2;
+        const vMax = (5 - coords[0]) * 0.2;
 
         return { uMin, uMax, vMin, vMax };
     }
